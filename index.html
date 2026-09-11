@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hormuz Transit Watch</title>
+  <meta name="description" content="Daily ship transits through the Strait of Hormuz against the 2025 baseline, Gulf exports by country, Brent crude, a crisis timeline and the latest news. Updated twice daily.">
+  <link rel="canonical" href="https://straitmonitor.com/">
+  <meta property="og:url" content="https://straitmonitor.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Hormuz Transit Watch">
+  <meta property="og:description" content="Daily ship transits through the Strait of Hormuz against the 2025 baseline, Gulf exports by country, Brent crude and a crisis timeline. Updated twice daily.">
+  <meta property="og:image" content="https://straitmonitor.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Hormuz Transit Watch">
+  <meta name="twitter:description" content="Daily ship transits through the Strait of Hormuz against the 2025 baseline, Gulf exports, Brent crude and a crisis timeline.">
+  <meta name="twitter:image" content="https://straitmonitor.com/og-image.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <div class="eyebrow">Strait of Hormuz · 26°34′N 56°15′E · Daily transit calls</div>
+      <h1>Hormuz Transit Watch</h1>
+      <p>Commercial vessels crossing the strait each day, measured against the 2025 baseline, with the latest reporting alongside.</p>
+      <div class="live"><span class="live-dot" id="live-dot" data-state="saved"></span><span id="live-text">Loading…</span></div>
+    </div>
+    <div class="status">
+      <span class="status-pill" id="status-pill" data-level="">
+        <span class="dot"></span>
+        <span id="status-text">Loading traffic data…</span>
+      </span>
+      <div class="counter" aria-label="Time since the closure began on 28 February 2026">
+        <span class="counter-label">Closure began 28 Feb 2026</span>
+        <span class="counter-digits">
+          <b id="counter-days" class="num">–</b><small>d</small>
+          <b id="counter-hours" class="num">––</b><small>h</small>
+          <b id="counter-mins" class="num">––</b><small>m</small>
+        </span>
+      </div>
+      <div class="meta" id="status-meta">Source: IMF PortWatch</div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="main">
+
+    <div class="stale" id="stale-notice" role="status" hidden></div>
+
+    <p class="summary" id="summary" aria-live="polite"></p>
+
+    <section class="tiles" id="tiles" aria-label="Key figures">
+      <div class="tile">
+        <div class="eyebrow label" id="tile-latest-label">Latest day</div>
+        <div class="value"><span class="num" id="tile-latest">–</span><small>transits</small></div>
+        <div class="compare"><span id="tile-latest-cmp">vs 2025 average</span> <span class="delta" id="tile-latest-delta">–</span></div>
+        <div class="meter" aria-hidden="true"><span id="tile-latest-meter" style="width:0%"></span></div>
+      </div>
+      <div class="tile">
+        <div class="eyebrow label">7-day average</div>
+        <div class="value"><span class="num" id="tile-week">–</span><small>per day</small></div>
+        <div class="compare"><span>vs 2025 average</span> <span class="delta" id="tile-week-delta">–</span></div>
+        <div class="meter" aria-hidden="true"><span id="tile-week-meter" style="width:0%"></span></div>
+      </div>
+      <div class="tile">
+        <div class="eyebrow label">Tankers · 7-day average</div>
+        <div class="value"><span class="num" id="tile-tanker">–</span><small>per day</small></div>
+        <div class="compare"><span id="tile-tanker-cmp">vs 2025 average</span> <span class="delta" id="tile-tanker-delta">–</span></div>
+        <div class="meter" aria-hidden="true"><span id="tile-tanker-meter" style="width:0%"></span></div>
+      </div>
+      <div class="tile">
+        <div class="eyebrow label">Deadweight tonnage · 7-day average</div>
+        <div class="value"><span class="num" id="tile-dwt">–</span><small>dwt / day</small></div>
+        <div class="compare"><span id="tile-dwt-cmp">vs 2025 average</span> <span class="delta" id="tile-dwt-delta">–</span></div>
+        <div class="meter" aria-hidden="true"><span id="tile-dwt-meter" style="width:0%"></span></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="chart-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="chart-title">Daily transits vs. 2025 baseline</h2>
+          <p class="sub">Hover the chart for any day's figures. Numbered markers are the key events listed below.</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="metric-seg" role="group" aria-label="Measure">
+            <button type="button" data-metric="total" aria-pressed="true">All vessels</button>
+            <button type="button" data-metric="tanker" aria-pressed="false">Tankers</button>
+            <button type="button" data-metric="capacity" aria-pressed="false">Tonnage</button>
+          </div>
+          <div class="seg" id="range-seg" role="group" aria-label="Date range">
+            <button type="button" data-range="30" aria-pressed="false">30 days</button>
+            <button type="button" data-range="90" aria-pressed="false">90 days</button>
+            <button type="button" data-range="crisis" aria-pressed="true">Since Feb 2026</button>
+            <button type="button" data-range="all" aria-pressed="false">From Jan 2025</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="bar"></i> <span id="legend-daily">Daily transits</span></span>
+        <span><i></i> 7-day average</span>
+        <span><i class="dash"></i> 2025 baseline</span>
+      </div>
+      <div class="chart-wrap" id="chart">
+        <div class="tooltip" id="tooltip" hidden></div>
+      </div>
+      <ol class="events" id="events" aria-label="Key events marked on the chart"></ol>
+    </section>
+
+    <section class="panel" aria-labelledby="cp-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="cp-title">Hormuz against the world's other chokepoints</h2>
+          <p class="sub">Current traffic as a share of each passage's own 2025 average, from the same PortWatch dataset.</p>
+        </div>
+      </div>
+      <div class="chokepoints" id="chokepoints"></div>
+      <p class="foot-note" id="chokepoints-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="cty-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="cty-title">Seaborne exports of the Gulf states</h2>
+          <p class="sub">Estimated tonnes shipped per day, 7-day average, as a share of each country's 2025 mean.</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="cmetric-seg" role="group" aria-label="Trade measure">
+            <button type="button" data-cmetric="export" aria-pressed="true">All exports</button>
+            <button type="button" data-cmetric="export_tanker" aria-pressed="false">Tanker exports</button>
+            <button type="button" data-cmetric="import" aria-pressed="false">Imports</button>
+          </div>
+          <div class="seg" id="countries-view" role="group" aria-label="View">
+            <button type="button" data-view="chart" aria-pressed="true">Charts</button>
+            <button type="button" data-view="table" aria-pressed="false">Table</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i></i> 7-day average, % of 2025</span>
+        <span><i class="dash"></i> 2025 average (100%)</span>
+        <span><i class="dash red"></i> 28 Feb closure</span>
+      </div>
+      <div class="countries" id="countries">
+        <div class="tooltip" id="cty-tooltip" hidden></div>
+      </div>
+      <p class="foot-note" id="countries-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="ports-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="ports-title">Where the oil goes instead</h2>
+          <p class="sub">Key ports outside the strait that can take diverted cargo, against the big terminals inside it.</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="pmetric-seg" role="group" aria-label="Port measure">
+            <button type="button" data-pmetric="export" aria-pressed="true">Exports</button>
+            <button type="button" data-pmetric="import" aria-pressed="false">Imports</button>
+            <button type="button" data-pmetric="portcalls" aria-pressed="false">Port calls</button>
+          </div>
+          <div class="seg" id="ports-view" role="group" aria-label="View">
+            <button type="button" data-view="chart" aria-pressed="true">Charts</button>
+            <button type="button" data-view="table" aria-pressed="false">Table</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i></i> 7-day average, % of 2025</span>
+        <span><i class="dash"></i> 2025 average (100%)</span>
+        <span><i class="dash red"></i> 28 Feb closure</span>
+      </div>
+      <div class="countries" id="ports">
+        <div class="tooltip" id="port-tooltip" hidden></div>
+      </div>
+      <p class="foot-note" id="ports-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="mix-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="mix-title">Who is still crossing</h2>
+          <p class="sub">Average daily transits by vessel type, last 7 days against the 2025 average.</p>
+        </div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="bar"></i> Last 7 days</span>
+        <span><i class="bar base"></i> 2025 average</span>
+      </div>
+      <div class="mix" id="mix"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="table-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="table-title">Last 14 days</h2>
+          <p class="sub">Daily counts as reported. Capacity is the combined deadweight tonnage of the vessels counted.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Total</th>
+              <th>Tankers</th>
+              <th>Container</th>
+              <th>Dry bulk</th>
+              <th>Other</th>
+              <th>Capacity (dwt)</th>
+              <th>vs 2025</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="tl-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="tl-title">How the closure unfolded</h2>
+          <p class="sub">Newest first. Numbered entries are the events marked on the chart.</p>
+        </div>
+      </div>
+      <ol class="timeline" id="timeline"></ol>
+    </section>
+
+    <section class="panel" aria-labelledby="pm-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="pm-title">What the prediction markets say</h2>
+          <p class="sub">Polymarket prices, read as the crowd's implied probability. Refreshed with the rest of the data.</p>
+        </div>
+      </div>
+      <div class="pm" id="pm"></div>
+      <p class="foot-note" id="pm-note"></p>
+    </section>
+
+  </div>
+
+  <aside class="aside">
+    <section class="panel map-panel" aria-labelledby="map-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="map-title">The chokepoint</h2>
+          <p class="sub">Schematic of the strait and its two-lane traffic separation scheme.</p>
+        </div>
+      </div>
+      <div class="map">
+        <svg viewBox="0 0 360 300" role="img" aria-label="Schematic map of the Strait of Hormuz between Iran to the north and the Musandam Peninsula of Oman to the south, with inbound and outbound shipping lanes">
+          <defs>
+            <pattern id="sea-grid" width="120" height="134" patternUnits="userSpaceOnUse" x="0" y="67">
+              <path d="M120,0 L0,0 0,134" fill="none" class="graticule"></path>
+            </pattern>
+          </defs>
+          <rect class="sea" x="0" y="0" width="360" height="300"></rect>
+          <rect x="0" y="0" width="360" height="300" fill="url(#sea-grid)"></rect>
+          <path class="land" d="M0,107 L72,74 L120,60 L154,43 L216,51 L252,54 L270,107 L276,188 L332,248 L360,252 L360,0 L0,0 Z"></path>
+          <path class="land" d="M34,121 L84,127 L120,100 L154,74 L144,67 L108,87 L60,100 L36,104 Z"></path>
+          <circle class="land" cx="174" cy="58" r="7"></circle>
+          <circle class="land" cx="162" cy="87" r="6"></circle>
+          <path class="land" d="M0,300 L0,295 L36,295 L66,261 L114,228 L128,201 L138,174 L150,157 L166,147 L174,172 L170,201 L156,248 L163,288 L162,300 Z"></path>
+          <path class="lane" d="M214,130 L162,110 L116,96"></path>
+          <path class="lane" d="M214,146 L162,126 L116,112"></path>
+          <path class="lane-arrow" d="M116,96 L124,92 L123,101 Z"></path>
+          <path class="lane-arrow" d="M214,146 L206,150 L207,141 Z"></path>
+          <text class="lane-label" x="110" y="90" text-anchor="end">inbound</text>
+          <text class="lane-label" x="220" y="152">outbound</text>
+          <line class="dim" x1="178" y1="94" x2="178" y2="146"></line>
+          <line class="dim" x1="174" y1="94" x2="182" y2="94"></line>
+          <line class="dim" x1="174" y1="146" x2="182" y2="146"></line>
+          <text class="dim-label" x="184" y="160">≈21 nm at the narrowest</text>
+          <circle class="town" cx="154" cy="43" r="2.5"></circle>
+          <text class="place" x="158" y="38">Bandar Abbas</text>
+          <circle class="town" cx="150" cy="174" r="2.5"></circle>
+          <text class="place" x="146" y="186" text-anchor="end">Khasab</text>
+          <circle class="town" cx="332" cy="248" r="2.5"></circle>
+          <text class="place" x="330" y="262" text-anchor="end">Jask</text>
+          <text class="place" x="94" y="112">Qeshm</text>
+          <text class="place" x="182" y="63">Hormuz I.</text>
+          <text class="place" x="150" y="90" text-anchor="end">Larak</text>
+          <text class="region" x="300" y="36">IRAN</text>
+          <text class="region" x="128" y="222">OMAN</text>
+          <text class="region" x="52" y="284">U.A.E.</text>
+          <text class="water" x="46" y="176">PERSIAN GULF</text>
+          <text class="water" x="248" y="220">GULF OF OMAN</text>
+          <text class="grat" x="4" y="64">27°N</text>
+          <text class="grat" x="4" y="198">26°N</text>
+          <text class="grat" x="123" y="296">56°E</text>
+          <text class="grat" x="243" y="296">57°E</text>
+        </svg>
+      </div>
+      <dl class="facts">
+        <div><dt>Narrowest point</dt><dd>About 21 nautical miles, between Larak Island and Oman's Musandam Peninsula.</dd></div>
+        <div><dt>Shipping lanes</dt><dd>Two lanes each 2 nautical miles wide, separated by a 2-mile buffer, in Omani waters.</dd></div>
+        <div><dt>Before the closure</dt><dd>Roughly a fifth of the world's seaborne oil and LNG passed through, on about 85 ships a day.</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel" aria-labelledby="brent-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="brent-title">Brent crude</h2>
+          <p class="sub" id="brent-sub">US dollars per barrel</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="brent-seg" role="group" aria-label="Brent date range">
+            <button type="button" data-brange="crisis" aria-pressed="true">Since Feb 2026</button>
+            <button type="button" data-brange="all" aria-pressed="false">From Jan 2025</button>
+          </div>
+          <div class="seg" id="brent-view" role="group" aria-label="View">
+            <button type="button" data-view="chart" aria-pressed="true">Chart</button>
+            <button type="button" data-view="table" aria-pressed="false">Table</button>
+          </div>
+        </div>
+      </div>
+      <div class="brent-head">
+        <div class="brent-price"><span id="brent-price">–</span><small>/bbl</small></div>
+        <div class="brent-deltas">
+          <span>vs 27 Feb <span class="delta" id="brent-vs-prewar">–</span></span>
+          <span>vs 2025 avg <span class="delta" id="brent-vs-2025">–</span></span>
+        </div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="line"></i> Daily close</span>
+        <span><i class="dash"></i> 2025 average</span>
+        <span><i class="dash red"></i> 28 Feb closure</span>
+      </div>
+      <div class="chart-wrap brent-wrap" id="brent-chart">
+        <div class="tooltip" id="brent-tooltip" hidden></div>
+      </div>
+      <p class="foot-note" id="brent-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="news-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="news-title">Latest news</h2>
+          <p class="sub" id="news-sub">Google News · “Strait of Hormuz”</p>
+        </div>
+      </div>
+      <div class="notice" id="news-notice" hidden></div>
+      <ul class="news-list" id="news"><li class="empty">Loading headlines…</li></ul>
+      <div class="news-foot">
+        <span id="news-updated">–</span>
+        <span>
+          <button type="button" class="btn" id="news-refresh">Refresh</button>
+          <a class="btn" style="text-decoration:none" href="https://news.google.com/search?q=%22Strait%20of%20Hormuz%22&hl=en-US&gl=US&ceid=US:en" target="_blank" rel="noopener">More</a>
+        </span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="notes-title">
+      <div class="panel-head">
+        <div><h2 id="notes-title">About the numbers</h2></div>
+      </div>
+      <div class="notes">
+        <p><strong>Traffic.</strong> Transit counts come from the IMF's <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">PortWatch</a> chokepoint dataset, which estimates daily transit calls from satellite AIS positions. Figures are published with a lag of a few days, so the latest day shown is usually 3 to 5 days behind today. A scheduled job refreshes this site's data twice a day; the time of the last refresh is shown in the header.</p>
+        <p><strong>Baseline.</strong> The baseline is the mean daily count across calendar year 2025, computed from the same dataset, so like is compared with like. Percentages are of that mean. The chokepoint comparison uses each passage's own 2025 mean.</p>
+        <p><strong>Country exports and ports.</strong> Tonnage by country and by port comes from PortWatch's daily trade estimates, which assign each port call an estimated import and export weight from the vessel's type, size and draught change. They are model estimates in metric tonnes, not customs figures, and volatile day to day, which is why the page shows 7-day averages. Saudi Arabia and the UAE also export from ports outside the strait, so their national figures understate the Hormuz effect; the port panel separates the two. Oman lies entirely outside and is shown for contrast.</p>
+        <p><strong>Oil price.</strong> Brent is the daily closing price of the front-month ICE Brent futures contract, the figure most news reports quote, taken from Yahoo Finance at each refresh. If that feed is unavailable the builder falls back to the US Energy Information Administration's daily spot price via FRED, which runs about two trading days behind, and the note under the chart says which source is in use.</p>
+        <p><strong>Prediction markets.</strong> Polymarket figures are the last traded price of the “Yes” share in each market, shown as a percentage. They are what traders are willing to pay, not a forecast, and thin markets move on small trades, so the volume is shown alongside. The headline market resolves on the same IMF PortWatch series this page charts, which is why its threshold is compared with the current 7-day average.</p>
+        <p><strong>Caveats.</strong> Vessels that switch off their AIS transponders or broadcast false positions are not counted, so true traffic during the crisis may be somewhat higher than shown. Counts are estimates, not official records. The map is a schematic, not a navigational chart. The summary sentence at the top is generated from the figures on the page.</p>
+        <p><strong>Timeline and news.</strong> Timeline entries are compiled from public reporting and may be revised as events are clarified. Headlines come from Google News for the search term “Strait of Hormuz”, collected at each refresh, and link to the original publishers.</p>
+      </div>
+    </section>
+
+  </aside>
+</main>
+
+<script src="data/events.js"></script>
+<script src="data/snapshot.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
