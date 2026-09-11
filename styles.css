@@ -674,10 +674,35 @@ a:hover { text-decoration-color: currentColor; }
 
 .foot-note {
   margin: 0;
-  padding: 6px 18px 16px;
+  padding: 6px 150px 16px 18px; /* right padding keeps clear of the corner watermark */
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ---------- Watermark ----------
+   A quiet "straitmonitor.com" in the corner of every panel, chart and the map, so screenshots
+   and cropped charts still say where they came from. */
+
+.panel, .tiles, .chart-wrap, .map { position: relative; }
+
+.panel::after, .tiles::after, .chart-wrap::after, .map::after {
+  content: "straitmonitor.com";
+  position: absolute;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: var(--muted);
+  opacity: 0.7;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.panel::after { right: 12px; bottom: 6px; }
+.tiles::after { right: 10px; bottom: 4px; }
+.chart-wrap::after, .map::after { right: 14px; top: 10px; opacity: 0.55; }
 
 /* ---------- Brent ---------- */
 
