@@ -543,10 +543,13 @@ a:hover { text-decoration-color: currentColor; }
 
 .pm {
   padding: 12px 18px 8px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
+
+/* Cards pack into two balanced columns so a short market never leaves a hole beside a tall one. */
+.pm-groups { columns: 2; column-gap: 16px; }
 
 .pm-hero {
   grid-column: 1 / -1;
@@ -580,7 +583,8 @@ a:hover { text-decoration-color: currentColor; }
 .pm-bar { position: relative; height: 8px; border-radius: 2px; background: var(--line-soft); overflow: hidden; margin-top: 6px; }
 .pm-bar > i { position: absolute; inset: 0 auto 0 0; background: var(--sea); border-radius: 2px; }
 
-.pm-group { min-width: 0; }
+.pm-group { min-width: 0; break-inside: avoid; margin-bottom: 16px; }
+.pm-groups .pm-group:last-child { margin-bottom: 0; }
 .pm-group h3 { margin: 0 0 6px; font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.2; }
 .pm-group h3 a { color: inherit; text-decoration: none; }
 .pm-group h3 a:hover { text-decoration: underline; }
@@ -596,7 +600,7 @@ a:hover { text-decoration-color: currentColor; }
   font-size: 13px;
 }
 
-.pm-row:first-of-type { border-top: 0; }
+.pm-row:first-of-type, h3 + .pm-row, .pm-vol + .pm-row { border-top: 0; }
 .pm-row .q { color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pm-row .p { font-family: var(--mono); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
 .pm-row .c { font-family: var(--mono); font-size: 11.5px; text-align: right; color: var(--muted); }
@@ -1082,7 +1086,7 @@ td .delta { margin-left: 6px; }
   .timeline li { grid-template-columns: 1fr; gap: 4px; }
   .tl-date { justify-content: flex-start; }
   .chokepoints, .timeline, .brent-head, .countries, .pm { padding-left: 14px; padding-right: 14px; }
-  .pm { grid-template-columns: 1fr; }
+  .pm-groups { columns: 1; }
   .pm-hero { grid-template-columns: 1fr; }
   .pm-hero .pm-big { font-size: 44px; }
   .brent-deltas { align-items: flex-start; }

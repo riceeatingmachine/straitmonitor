@@ -895,6 +895,7 @@
 
     var others = pm.events.filter(function (e) { return !used[e.slug] && e.markets.length; })
       .sort(function (a, b) { return (b.volume || 0) - (a.volume || 0); }).slice(0, 10);
+    var groups = el('div', { class: 'pm-groups' });
     others.forEach(function (ev) {
       var g = el('div', { class: 'pm-group' });
       g.appendChild(el('h3', null, [el('a', { href: 'https://polymarket.com/event/' + encodeURIComponent(ev.slug), target: '_blank', rel: 'noopener', text: ev.title })]));
@@ -915,8 +916,9 @@
         row.appendChild(track);
         g.appendChild(row);
       });
-      box.appendChild(g);
+      groups.appendChild(g);
     });
+    if (others.length) box.appendChild(groups);
 
     note.textContent = 'Prices as of ' + fmtStamp(pm.fetchedAt) + '. Change is over the past week in percentage points. Source: Polymarket public API.';
   }
