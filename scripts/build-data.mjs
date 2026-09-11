@@ -23,6 +23,8 @@ const PORTS_BASE = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/se
 const PORTS = ['port570', 'port362', 'port988', 'port746', 'port526', 'port1090', 'port2479', 'port744'];
 const PORT_COLUMNS = ['portid', 'date', 'export', 'import', 'portcalls'];
 const NEWS_RSS = 'https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22&hl=en-US&gl=US&ceid=US:en';
+// Broader feed for the war tracker: strikes, naval incidents, diplomacy, sanctions and the oil market.
+const WAR_RSS = 'https://news.google.com/rss/search?q=Iran+(war+OR+strike+OR+strikes+OR+missile+OR+missiles+OR+ceasefire+OR+IRGC+OR+blockade+OR+drone+OR+navy+OR+CENTCOM+OR+sanctions)&hl=en-US&gl=US&ceid=US:en';
 
 const COLUMNS = ['date', 'n_total', 'n_tanker', 'n_container', 'n_dry_bulk', 'n_general_cargo', 'n_roro', 'capacity', 'capacity_tanker'];
 const CHOKE_COLUMNS = ['date', 'portid', 'portname', 'n_total', 'n_tanker', 'capacity'];
@@ -273,8 +275,8 @@ function tag(block, name) {
   return m ? decodeEntities(m[1]) : '';
 }
 
-async function fetchNews() {
-  const res = await fetch(NEWS_RSS, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hormuz-transit-watch/1.0)' }, signal: AbortSignal.timeout(30000) });
+async function fetchFeed(url, limit) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hormuz-transit-watch/1.0)' }, signal: AbortSignal.timeout(30000) });
   if (!res.ok) throw new Error(`Google News HTTP ${res.status}`);
   const xml = await res.text();
   const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]);
@@ -294,8 +296,11 @@ async function fetchNews() {
   }
   if (!out.length) throw new Error('Google News: no items parsed');
   out.sort((a, b) => (a.pubDate < b.pubDate ? 1 : -1));
-  return out.slice(0, 20);
+  return out.slice(0, limit);
 }
+
+const fetchNews = () => fetchFeed(NEWS_RSS, 20);
+const fetchWarNews = () => fetchFeed(WAR_RSS, 40);
 
 async function loadExisting() {
   try { return JSON.parse(await readFile(jsonPath, 'utf8')); } catch { return null; }
@@ -335,7 +340,8 @@ const snapshot = {
   portBaselines: await section('Port baselines', fetchPortBaselines, previous?.portBaselines),
   brent: await section('Brent', fetchBrent, previous?.brent),
   polymarket: await section('Polymarket', fetchPolymarket, previous?.polymarket ?? null),
-  news: await section('News', fetchNews, previous?.news)
+  news: await section('News', fetchNews, previous?.news),
+  warNews: await section('War news', fetchWarNews, previous?.warNews ?? [])
 };
 
 await mkdir(dataDir, { recursive: true });

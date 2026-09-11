@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hormuz Transit Watch</title>
-  <meta name="description" content="Daily ship transits through the Strait of Hormuz against the 2025 baseline, Gulf exports by country, Brent crude, a crisis timeline and the latest news. Updated twice daily.">
+  <meta name="description" content="Daily ship transits through the Strait of Hormuz against the 2025 baseline, Gulf exports by country, Brent crude, a crisis timeline, the latest news and a war tracker. Updated twice daily.">
   <link rel="canonical" href="https://straitmonitor.com/">
   <meta property="og:url" content="https://straitmonitor.com/">
   <meta property="og:type" content="website">
@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
@@ -372,7 +372,33 @@
         <p><strong>Oil price.</strong> Brent is the daily closing price of the front-month ICE Brent futures contract, the figure most news reports quote, taken from Yahoo Finance at each refresh. If that feed is unavailable the builder falls back to the US Energy Information Administration's daily spot price via FRED, which runs about two trading days behind, and the note under the chart says which source is in use.</p>
         <p><strong>Prediction markets.</strong> Polymarket figures are the last traded price of the “Yes” share in each market, shown as a percentage. They are what traders are willing to pay, not a forecast, and thin markets move on small trades, so the volume is shown alongside. The headline market resolves on the same IMF PortWatch series this page charts, which is why its threshold is compared with the current 7-day average.</p>
         <p><strong>Caveats.</strong> Vessels that switch off their AIS transponders or broadcast false positions are not counted, so true traffic during the crisis may be somewhat higher than shown. Counts are estimates, not official records. The map is a schematic, not a navigational chart. The summary sentence at the top is generated from the figures on the page.</p>
-        <p><strong>Timeline and news.</strong> Timeline entries are compiled from public reporting and may be revised as events are clarified. Headlines come from Google News for the search term “Strait of Hormuz”, collected at each refresh, and link to the original publishers.</p>
+        <p><strong>Timeline and news.</strong> Timeline entries are compiled from public reporting and may be revised as events are clarified. Headlines come from Google News for the search term “Strait of Hormuz”, collected at each refresh, and link to the original publishers. The war tracker below draws on a broader Google News search for the wider conflict and sorts each headline into a category by its wording, so the labels are a rough guide rather than an editorial judgement.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="war-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="war-title">War tracker</h2>
+          <p class="sub">Developments in the wider Iran war beyond the strait: strikes, naval incidents, diplomacy, sanctions and the oil market, newest first.</p>
+        </div>
+      </div>
+      <div class="chips" id="war-seg" role="group" aria-label="Filter developments">
+        <button type="button" data-war="all" aria-pressed="true">All <i>–</i></button>
+        <button type="button" data-war="strikes" aria-pressed="false">Strikes <i>–</i></button>
+        <button type="button" data-war="naval" aria-pressed="false">Naval &amp; shipping <i>–</i></button>
+        <button type="button" data-war="diplomacy" aria-pressed="false">Diplomacy <i>–</i></button>
+        <button type="button" data-war="economy" aria-pressed="false">Sanctions &amp; oil <i>–</i></button>
+        <button type="button" data-war="politics" aria-pressed="false">Politics <i>–</i></button>
+      </div>
+      <div class="notice" id="war-notice" hidden></div>
+      <ol class="war-list" id="war"><li class="empty">Loading developments…</li></ol>
+      <div class="news-foot">
+        <span id="war-updated">–</span>
+        <span>
+          <button type="button" class="btn" id="war-refresh">Refresh</button>
+          <a class="btn" style="text-decoration:none" href="https://news.google.com/search?q=Iran+(war+OR+strike+OR+strikes+OR+missile+OR+missiles+OR+ceasefire+OR+IRGC+OR+blockade+OR+drone+OR+navy+OR+CENTCOM+OR+sanctions)&amp;hl=en-US&amp;gl=US&amp;ceid=US:en" target="_blank" rel="noopener">More</a>
+        </span>
       </div>
     </section>
 
@@ -381,6 +407,6 @@
 
 <script src="data/events.js"></script>
 <script src="data/snapshot.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

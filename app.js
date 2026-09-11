@@ -39,6 +39,8 @@
 
   var NEWS_RSS = 'https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22&hl=en-US&gl=US&ceid=US:en';
   var NEWS_URL = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(NEWS_RSS);
+  var WAR_RSS = 'https://news.google.com/rss/search?q=Iran+(war+OR+strike+OR+strikes+OR+missile+OR+missiles+OR+ceasefire+OR+IRGC+OR+blockade+OR+drone+OR+navy+OR+CENTCOM+OR+sanctions)&hl=en-US&gl=US&ceid=US:en';
+  var WAR_URL = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(WAR_RSS);
 
   var CRISIS_START = '2026-02-28';
   var CRISIS_START_MS = Date.UTC(2026, 1, 28, 0, 0, 0);
@@ -105,6 +107,7 @@
 
   var state = {
     rows: [], baseline: null,
+    war: 'all', warItems: [], warShowAll: false,   // war tracker filter, the classified headlines, and whether the list is expanded
     chokeRecent: [], chokeBaselines: {},
     countryRows: {}, countryBaselines: {},
     portRows: {}, portBaselines: {},
@@ -1410,6 +1413,122 @@
     renderNews((snap && snap.news) || [], 'Updated ' + fmtStamp(snap && snap.fetchedAt));
   }
 
+  // ---------- War tracker ----------
+
+  // Rough keyword classifier for headlines; first match wins, so kinetic events outrank the politics around them.
+  var WAR_CATS = [
+    { key: 'strikes', label: 'Strikes', re: /\bstrikes?\b|\bstruck\b|missile|\bdrone\b|attack|\bbomb(?:s|ed|ing|ings)?\b|rocket|explosion|\bkilled\b|air ?raid|shell(?:ing|ed)|\bhits?\b|destroy|intercept/i },
+    { key: 'naval', label: 'Naval & shipping', re: /\bnavy\b|naval|warship|destroyer|carrier|fleet|tanker|vessel|\bships?\b|shipping|seiz|\bmines?\b|convoy|escort|centcom|blockade|\bports?\b|strait|hormuz|red sea|houthi|saildrone|sail drone/i },
+    { key: 'diplomacy', label: 'Diplomacy', re: /cease-?fire|truce|\btalks\b|negotiat|agreement|\bdeal\b|memorandum|summit|envoy|diplomat|\bpeace\b|mediat|\bUN\b|united nations|security council|brics|joint statement|pause/i },
+    { key: 'economy', label: 'Sanctions & oil', re: /sanction|embargo|tariff|treasury|\boil\b|brent|crude|\blng\b|\bgas\b|barrel|opec|\bprices?\b|markets?\b|insur|freight|econom|inflation|energy/i },
+    { key: 'politics', label: 'Politics', re: /trump|congress|senate|election|midterm|white house|pentagon|netanyahu|khamenei|\bvance\b|president|minister|parliament|poll/i }
+  ];
+
+  var WAR_SHOW = 25; // headlines shown before the "Show more" button
+
+  function classifyWar(title) {
+    for (var i = 0; i < WAR_CATS.length; i++) if (WAR_CATS[i].re.test(title)) return WAR_CATS[i];
+    return { key: 'other', label: 'Update' };
+  }
+
+  function warKey(title) { return String(title || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').slice(0, 80); }
+
+  function dayLabel(dateStr) {
+    var t = Date.parse(dateStr || '');
+    if (isNaN(t)) return 'Undated';
+    var d = new Date(t), now = new Date();
+    var key = function (x) { return x.getFullYear() * 10000 + x.getMonth() * 100 + x.getDate(); };
+    if (key(d) === key(now)) return 'Today';
+    if (key(d) === key(new Date(now.getTime() - 86400000))) return 'Yesterday';
+    return d.getDate() + ' ' + MONTHS[d.getMonth()];
+  }
+
+  function setWarItems(items) {
+    var seen = {}, out = [];
+    items.forEach(function (it) {
+      var t = it.source ? { headline: it.title || '', source: it.source } : splitTitle(it.title || '');
+      var key = warKey(t.headline);
+      if (!t.headline || seen[key]) return;
+      seen[key] = true;
+      var cat = classifyWar(t.headline);
+      out.push({ headline: t.headline, source: t.source, link: it.link, pubDate: it.pubDate, cat: cat.key, label: cat.label });
+    });
+    out.sort(function (a, b) { return (a.pubDate || '') < (b.pubDate || '') ? 1 : -1; });
+    state.warItems = out;
+    renderWarList();
+  }
+
+  function renderWarList() {
+    var list = $('war');
+    list.innerHTML = '';
+    var all = state.warItems.filter(function (it) { return state.war === 'all' || it.cat === state.war; });
+    if (!all.length) {
+      list.appendChild(el('li', { class: 'empty', text: state.warItems.length ? 'Nothing in this category right now.' : 'No developments available right now.' }));
+    }
+    var items = state.warShowAll ? all : all.slice(0, WAR_SHOW);
+    var lastDay = null;
+    items.forEach(function (it) {
+      var day = dayLabel(it.pubDate);
+      if (day !== lastDay) { list.appendChild(el('li', { class: 'day', text: day })); lastDay = day; }
+      list.appendChild(el('li', { class: 'item' }, [
+        el('div', { class: 'src' }, [
+          el('span', { class: 'tag', 'data-cat': it.cat, text: it.label }),
+          el('b', { text: it.source || 'News' }),
+          el('span', { class: 'when', text: relTime(it.pubDate) })
+        ]),
+        el('a', { href: it.link, target: '_blank', rel: 'noopener', text: it.headline })
+      ]));
+    });
+    if (all.length > items.length) {
+      var more = el('button', { type: 'button', class: 'btn', text: 'Show ' + (all.length - items.length) + ' more' });
+      more.addEventListener('click', function () { state.warShowAll = true; renderWarList(); });
+      list.appendChild(el('li', { class: 'more' }, [more]));
+    }
+    var counts = {};
+    state.warItems.forEach(function (it) { counts[it.cat] = (counts[it.cat] || 0) + 1; });
+    document.querySelectorAll('#war-seg button[data-war]').forEach(function (b) {
+      var k = b.getAttribute('data-war');
+      var c = b.querySelector('i');
+      if (c) c.textContent = k === 'all' ? state.warItems.length : (counts[k] || 0);
+    });
+  }
+
+  // The tracker merges the broad war feed with the Hormuz headlines, deduplicated by title.
+  function warSourceItems() {
+    var snap = window.HORMUZ_SNAPSHOT;
+    return ((snap && snap.warNews) || []).concat((snap && snap.news) || []);
+  }
+
+  function renderWarFromSnapshot() {
+    var snap = window.HORMUZ_SNAPSHOT;
+    $('war-notice').hidden = true;
+    setWarItems(warSourceItems());
+    $('war-updated').textContent = 'Updated ' + fmtStamp(snap && snap.fetchedAt);
+  }
+
+  function loadWar() {
+    var btn = $('war-refresh');
+    var notice = $('war-notice');
+    btn.disabled = true;
+    notice.hidden = true;
+    return Promise.all([fetchJson(WAR_URL), fetchJson(NEWS_URL).catch(function () { return null; })])
+      .then(function (res) {
+        var war = res[0], hz = res[1];
+        if (war.status !== 'ok' || !war.items) throw new Error('Feed error');
+        setWarItems(war.items.concat(hz && hz.items ? hz.items : []));
+        $('war-updated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      })
+      .catch(function () {
+        var snap = window.HORMUZ_SNAPSHOT;
+        var when = snap && snap.fetchedAt ? snap.fetchedAt.slice(0, 10) : '';
+        notice.textContent = 'The live feed could not be reached. Showing developments saved with the site' + (when ? ' on ' + fmtDate(when, true) : '') + '.';
+        notice.hidden = false;
+        setWarItems(warSourceItems());
+        $('war-updated').textContent = 'Saved developments';
+      })
+      .then(function () { btn.disabled = false; });
+  }
+
   // ---------- Wiring ----------
 
   function renderAll() {
@@ -1444,6 +1563,7 @@
   wireSegment('#metric-seg', 'data-metric', function (v) { state.metric = v; writeHash(); renderChart(); });
   wireSegment('#cmetric-seg', 'data-cmetric', function (v) { state.cmetric = v; writeHash(); renderCountries(); });
   wireSegment('#pmetric-seg', 'data-pmetric', function (v) { state.pmetric = v; writeHash(); renderPorts(); });
+  wireSegment('#war-seg', 'data-war', function (v) { state.war = v; state.warShowAll = false; renderWarList(); });
   wireSegment('#brent-seg', 'data-brange', function (v) { state.brange = v; writeHash(); renderBrent(); });
   wireSegment('#countries-view', 'data-view', function (v) { state.views.countries = v; renderCountries(); });
   wireSegment('#ports-view', 'data-view', function (v) { state.views.ports = v; renderPorts(); });
@@ -1473,6 +1593,7 @@
         state.source = 'cached';
         renderAll();
         renderNewsFromSnapshot();
+        renderWarFromSnapshot();
       })
       .catch(function () { /* keep what is on screen */ })
       .then(function () { btn.disabled = false; });
@@ -1488,8 +1609,10 @@
       state.source = 'cached';
       renderAll();
       renderNewsFromSnapshot();
+      renderWarFromSnapshot();
     }
     $('news-refresh').addEventListener('click', refreshSnapshot);
+    $('war-refresh').addEventListener('click', refreshSnapshot);
 
     var HOURLY = 60 * 60 * 1000;
     var lastCheck = Date.now();
@@ -1505,7 +1628,7 @@
 
   // ---------- Live mode ----------
 
-  if (haveSnapshot) { renderAll(); renderNewsFromSnapshot(); }
+  if (haveSnapshot) { renderAll(); renderNewsFromSnapshot(); renderWarFromSnapshot(); }
 
   function afterLive() { renderHeader(); renderSummary(); renderChart(); renderMix(); renderTable(); renderTimeline(); }
 
@@ -1521,6 +1644,8 @@
   loadCountries().then(function () { renderCountries(); renderSummary(); }).catch(function () {});
   $('news-refresh').addEventListener('click', loadNews);
   loadNews();
+  $('war-refresh').addEventListener('click', loadWar);
+  loadWar();
 
   var TRAFFIC_EVERY = 60 * 60 * 1000, NEWS_EVERY = 10 * 60 * 1000;
   var lastTraffic = Date.now(), lastNews = Date.now();
@@ -1530,7 +1655,7 @@
     loadChokepoints().then(renderChokepoints).catch(function () {});
     loadCountries().then(renderCountries).catch(function () {});
   }
-  function refreshNews() { lastNews = Date.now(); loadNews(); }
+  function refreshNews() { lastNews = Date.now(); loadNews(); loadWar(); }
   setInterval(refreshTraffic, TRAFFIC_EVERY);
   setInterval(refreshNews, NEWS_EVERY);
   document.addEventListener('visibilitychange', function () {

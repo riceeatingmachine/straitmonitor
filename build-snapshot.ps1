@@ -166,12 +166,11 @@ try {
   Write-Host "Polymarket: $($events.Count) events"
 } catch { Write-Warning "Polymarket failed: $_"; if ($previous -and $previous.polymarket) { $polymarket = $previous.polymarket } }
 
-# 4. News straight from the Google News RSS feed (no relay service)
-$news = $null
-try {
-  $rss = Invoke-RestMethod -Uri 'https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22&hl=en-US&gl=US&ceid=US:en' -UseBasicParsing -UserAgent 'Mozilla/5.0 (compatible; hormuz-transit-watch/1.0)'
+# 4. News straight from the Google News RSS feeds (no relay service)
+function Get-Feed([string]$url, [int]$limit) {
+  $rss = Invoke-RestMethod -Uri $url -UseBasicParsing -UserAgent 'Mozilla/5.0 (compatible; hormuz-transit-watch/1.0)'
   $seen = @{}
-  $news = @()
+  $items = @()
   foreach ($item in $rss) {
     $title = [string]$item.title
     $source = if ($item.source) { [string]$item.source.'#text' } else { '' }
@@ -181,11 +180,20 @@ try {
     $seen[$key] = $true
     $pub = $null
     try { $pub = ([DateTime]::Parse($item.pubDate, [Globalization.CultureInfo]::InvariantCulture)).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } catch {}
-    $news += [ordered]@{ title = $title; link = [string]$item.link; source = $source; pubDate = $pub }
+    $items += [ordered]@{ title = $title; link = [string]$item.link; source = $source; pubDate = $pub }
   }
-  $news = @($news | Sort-Object -Property pubDate -Descending | Select-Object -First 20)
+  return @($items | Sort-Object -Property pubDate -Descending | Select-Object -First $limit)
+}
+$news = $null
+try {
+  $news = Get-Feed 'https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22&hl=en-US&gl=US&ceid=US:en' 20
   Write-Host "News items: $($news.Count)"
 } catch { Write-Warning "News failed: $_"; if ($previous) { $news = $previous.news } }
+$warNews = @()
+try {
+  $warNews = Get-Feed 'https://news.google.com/rss/search?q=Iran+(war+OR+strike+OR+strikes+OR+missile+OR+missiles+OR+ceasefire+OR+IRGC+OR+blockade+OR+drone+OR+navy+OR+CENTCOM+OR+sanctions)&hl=en-US&gl=US&ceid=US:en' 40
+  Write-Host "War news items: $($warNews.Count)"
+} catch { Write-Warning "War news failed: $_"; if ($previous -and $previous.warNews) { $warNews = $previous.warNews } }
 
 $snap = [ordered]@{
   fetchedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -203,6 +211,7 @@ $snap = [ordered]@{
   brent = $brent
   polymarket = $polymarket
   news = $news
+  warNews = $warNews
 }
 $json = $snap | ConvertTo-Json -Depth 6 -Compress
 New-Item -ItemType Directory -Force -Path (Join-Path $root 'data') | Out-Null

@@ -9,6 +9,7 @@ on:
   push:
     paths:
       - make-social-cards.py
+      - scripts/build-data.mjs
       - .github/workflows/update-data.yml
 
 permissions:

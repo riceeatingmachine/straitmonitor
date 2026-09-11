@@ -1,7 +1,7 @@
 # Hormuz Transit Watch
 
 A static site that tracks daily commercial vessel transits through the Strait of Hormuz, compares them with the
-2025 baseline and with other chokepoints, and lists a crisis timeline and the latest news.
+2025 baseline and with other chokepoints, and lists a crisis timeline, the latest news and a war tracker.
 
 ## How it stays current
 
@@ -97,6 +97,7 @@ figures and link previews fetch the fresh image. The `og:image`, `og:url` and ca
   open events tagged "iran" whose titles mention the strait, ceasefire, peace deal, blockade or oil, and always tries the
   pinned slugs in `PM_PINNED_SLUGS`. Home networks often block the API; the GitHub runner does not.
 - **News:** Google News RSS for the phrase "Strait of Hormuz", parsed directly by the build script.
+- **War tracker:** a second Google News RSS search for the wider Iran war (strikes, missiles, ceasefire, IRGC, blockade, sanctions and so on), up to 40 headlines, merged with the Hormuz headlines and sorted into categories by keyword in the browser.
 - **Timeline:** `data/events.js`, compiled by hand from public reporting.
 
 ## Files
