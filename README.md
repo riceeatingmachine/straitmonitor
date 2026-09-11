@@ -92,6 +92,9 @@ site ever moves.
 - `index.html` – page structure, including the schematic map
 - `styles.css` – theme (light and dark), layout, chart styling
 - `app.js` – rendering, baseline maths, chart, timeline, cached/live data modes
+
+When you change `styles.css` or `app.js`, bump the `?v=` number on their two references in `index.html` so browsers and
+the Cloudflare cache fetch the new files instead of serving a copy cached for up to four hours.
 - `data/snapshot.js`, `data/snapshot.json` – the generated data (committed; rebuilt by the workflow)
 - `data/events.js` – the hand-maintained timeline
 - `og-image.png`, `make-og-image.ps1` – social preview image and the script that draws it
