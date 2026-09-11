@@ -65,9 +65,20 @@ editor if you like; nothing else needs to change. Entries marked `major: true` a
 
 ## Social preview image
 
-`og-image.png` is generated from the current data by `make-og-image.ps1` (Windows, no extra software). The
-`og:image`, `og:url` and canonical tags in `index.html` point at `https://straitmonitor.com/`; change them if the
-site ever moves.
+## Social cards
+
+`python make-social-cards.py` draws three cards from the current `data/snapshot.json`, using a local Chrome or Edge
+headlessly (web fonts are fetched from Google Fonts, so it needs internet access):
+
+- `og-image.png` (1200 x 630) – the link preview for X, LinkedIn, Slack, iMessage and WhatsApp
+- `social/card-square.png` (1080 x 1080) – Instagram feed, Threads, Mastodon
+- `social/card-story.png` (1080 x 1920) – Instagram and WhatsApp stories
+
+Each card leads with the share of normal traffic, the ships-per-day comparison and a chart of the collapse, then the
+transits that never happened since the closure, the tanker drop, the worst-hit exporters, Brent and the Polymarket
+odds. Re-run the script after a data refresh and bump the `?v=` on the `og:image` and `twitter:image` tags in
+`index.html` so the platforms fetch the new image. The `og:image`, `og:url` and canonical tags point at
+`https://straitmonitor.com/`; change them if the site ever moves.
 
 ## Data sources
 
@@ -97,7 +108,7 @@ When you change `styles.css` or `app.js`, bump the `?v=` number on their two ref
 the Cloudflare cache fetch the new files instead of serving a copy cached for up to four hours.
 - `data/snapshot.js`, `data/snapshot.json` – the generated data (committed; rebuilt by the workflow)
 - `data/events.js` – the hand-maintained timeline
-- `og-image.png`, `make-og-image.ps1` – social preview image and the script that draws it
+- `og-image.png`, `social/`, `make-social-cards.py` – social cards and the script that draws them
 - `scripts/build-data.mjs` – data builder used by the workflow (Node 18+, no dependencies)
 - `.github/workflows/update-data.yml` – the twice-daily schedule
 - `build-snapshot.ps1` – Windows equivalent of the builder
