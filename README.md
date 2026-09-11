@@ -79,6 +79,11 @@ odds. The workflow re-runs the script after every data refresh and stamps the da
 figures and link previews fetch the fresh image. The `og:image`, `og:url` and canonical tags point at
 `https://straitmonitor.com/`; change them if the site ever moves.
 
+## Analytics
+
+`index.html` loads Google Analytics (gtag.js, property `G-4L4W1HVJ27`) at the top of `<head>`. It is the only
+third-party script on the page; remove that block to run without analytics.
+
 ## Data sources
 
 - **Traffic:** IMF PortWatch, "Daily Chokepoints Data" (ArcGIS FeatureServer), `portid = chokepoint6` for Hormuz.
