@@ -114,6 +114,7 @@ same for `data/snapshot.js`, `data/events.js` and `og-image.png` on every refres
 - `data/snapshot.js`, `data/snapshot.json` – the generated data (committed; rebuilt by the workflow)
 - `data/events.js` – the hand-maintained timeline
 - `og-image.png`, `social/`, `make-social-cards.py` – social cards and the script that draws them
+- `favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `site.webmanifest`, `make-favicons.py` – the site icon (the strait as a chokepoint) and the script that renders the raster sizes from the SVG
 - `scripts/build-data.mjs` – data builder used by the workflow (Node 18+, no dependencies)
 - `.github/workflows/update-data.yml` – the twice-daily schedule
 - `build-snapshot.ps1` – Windows equivalent of the builder

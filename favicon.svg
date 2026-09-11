@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Hormuz Transit Watch: the strait as a chokepoint. Land above and below, a channel that
+       narrows in the middle, and the site's red "restricted" dot at the pinch. -->
+  <defs>
+    <clipPath id="r"><rect width="64" height="64" rx="14"/></clipPath>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7cc4ea"/>
+      <stop offset="1" stop-color="#2f80ad"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="64" height="64" fill="url(#sea)"/>
+    <!-- shipping lane hint -->
+    <path d="M-4 40 C12 34 20 32 32 32 S52 30 68 24" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.6" stroke-dasharray="3 3"/>
+    <!-- land to the north -->
+    <path d="M0 0 H64 V13 C56 13 50 17 44 21 C38 25 35 26 32 26 C27 26 21 22 15 19.5 C9 17 4 17 0 17 Z" fill="#0c1820"/>
+    <!-- land to the south, the peninsula pushing into the strait -->
+    <path d="M0 64 H64 V52 C58 50 52 46 46 42 C40 38 36 38 32 38 C28 38 23 41 17 45 C11 49 5 50 0 50 Z" fill="#0c1820"/>
+    <!-- the pinch -->
+    <circle cx="32" cy="32" r="7" fill="#e8735a" fill-opacity="0.28"/>
+    <circle cx="32" cy="32" r="4.2" fill="#e8735a" stroke="#0c1820" stroke-width="1.2"/>
+  </g>
+</svg>
