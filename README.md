@@ -76,8 +76,9 @@ headlessly (web fonts are fetched from Google Fonts, so it needs internet access
 
 Each card leads with the share of normal traffic, the ships-per-day comparison and a chart of the collapse, then the
 transits that never happened since the closure, the tanker drop, the worst-hit exporters, Brent and the Polymarket
-odds. Re-run the script after a data refresh and bump the `?v=` on the `og:image` and `twitter:image` tags in
-`index.html` so the platforms fetch the new image. The `og:image`, `og:url` and canonical tags point at
+odds. The workflow re-runs the script after every data refresh and stamps the day's date onto the `?v=` of the
+`og:image` and `twitter:image` tags in `index.html`, so the published cards always show the current day count and
+figures and link previews fetch the fresh image. The `og:image`, `og:url` and canonical tags point at
 `https://straitmonitor.com/`; change them if the site ever moves.
 
 ## Data sources

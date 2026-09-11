@@ -6,6 +6,10 @@ on:
     - cron: '17 3 * * *'
     - cron: '17 15 * * *'
   workflow_dispatch:
+  push:
+    paths:
+      - make-social-cards.py
+      - .github/workflows/update-data.yml
 
 permissions:
   contents: write
@@ -27,11 +31,19 @@ jobs:
       - name: Fetch PortWatch and news
         run: node scripts/build-data.mjs
 
+      # The cards bake today's numbers into the image, so redraw them after every refresh and bump the
+      # ?v= on the og:image tags so link previews fetch the new picture instead of a cached one.
+      - name: Redraw the social cards
+        run: |
+          python3 make-social-cards.py
+          stamp=$(date -u +'%Y%m%d')
+          sed -i -E "s/og-image\.png\?v=[^\"]*/og-image.png?v=$stamp/g" index.html
+
       - name: Commit if anything changed
         run: |
           git config user.name "hormuz-data-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/snapshot.js data/snapshot.json
+          git add data/snapshot.js data/snapshot.json og-image.png social index.html
           if git diff --cached --quiet; then
             echo "No changes"
           else

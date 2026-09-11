@@ -8,8 +8,9 @@ Outputs (all written next to this script):
 
 Usage:  python make-social-cards.py
 Needs a local Chrome or Edge (used headless for rendering) and internet access for the web fonts.
+The GitHub workflow runs this after every data refresh, so the published cards always carry today's numbers.
 """
-import json, os, subprocess, sys, tempfile, statistics, shutil
+import json, os, pathlib, subprocess, sys, tempfile, statistics, shutil
 from datetime import date, datetime
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -316,7 +317,9 @@ def render(browser, html, out, w, h, scale=1):
     profile = os.path.join(tmpdir, "profile")
     cmd = [browser, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--no-default-browser-check",
            f"--user-data-dir={profile}", f"--window-size={w},{h}", f"--force-device-scale-factor={scale}",
-           "--virtual-time-budget=12000", f"--screenshot={out}", "file:///" + src.replace("\\", "/")]
+           "--virtual-time-budget=12000", f"--screenshot={out}", pathlib.Path(src).as_uri()]
+    if os.name != "nt":
+        cmd.insert(1, "--no-sandbox")  # CI runners
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
     shutil.rmtree(tmpdir, ignore_errors=True)
     print(f"wrote {os.path.relpath(out, ROOT)}  ({w * scale}x{h * scale})")
