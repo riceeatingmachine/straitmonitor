@@ -63,8 +63,6 @@ powershell -ExecutionPolicy Bypass -File build-snapshot.ps1
 Events live in `data/events.js` as a plain list of `{ date, label, major }` entries. Edit that file, in the GitHub web
 editor if you like; nothing else needs to change. Entries marked `major: true` are also numbered on the traffic chart.
 
-## Social preview image
-
 ## Social cards
 
 `python make-social-cards.py` draws three cards from the current `data/snapshot.json`, using a local Chrome or Edge
