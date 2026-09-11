@@ -109,7 +109,8 @@ figures and link previews fetch the fresh image. The `og:image`, `og:url` and ca
 - `app.js` – rendering, baseline maths, chart, timeline, cached/live data modes
 
 When you change `styles.css` or `app.js`, bump the `?v=` number on their two references in `index.html` so browsers and
-the Cloudflare cache fetch the new files instead of serving a copy cached for up to four hours.
+the Cloudflare cache fetch the new files instead of serving a copy cached for up to four hours. The workflow does the
+same for `data/snapshot.js`, `data/events.js` and `og-image.png` on every refresh, stamping the run time onto them.
 - `data/snapshot.js`, `data/snapshot.json` – the generated data (committed; rebuilt by the workflow)
 - `data/events.js` – the hand-maintained timeline
 - `og-image.png`, `social/`, `make-social-cards.py` – social cards and the script that draws them

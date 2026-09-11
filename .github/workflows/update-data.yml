@@ -37,8 +37,10 @@ jobs:
       - name: Redraw the social cards
         run: |
           python3 make-social-cards.py
-          stamp=$(date -u +'%Y%m%d')
-          sed -i -E "s/og-image\.png\?v=[^\"]*/og-image.png?v=$stamp/g" index.html
+          stamp=$(date -u +'%Y%m%d%H%M')
+          # Also stamp the data files: browsers and the CDN may keep them for hours, and a stale
+          # snapshot can lack keys that a newer app.js expects.
+          sed -i -E "s/(og-image\.png|snapshot\.js|events\.js)\?v=[^\"]*/\1?v=$stamp/g" index.html
 
       - name: Commit if anything changed
         run: |
