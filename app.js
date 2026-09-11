@@ -109,6 +109,7 @@
     rows: [], baseline: null,
     war: 'all', warItems: [], warShowAll: false,   // war tracker filter, the classified headlines, and whether the list is expanded
     bmetric: 'export',   // measure shown in the country balance panel
+    stocks: null, stocksShowAll: false,   // JODI crude stock levels by country and whether the list is expanded
     chokeRecent: [], chokeBaselines: {},
     countryRows: {}, countryBaselines: {},
     portRows: {}, portBaselines: {},
@@ -350,6 +351,7 @@
       };
     }
     state.markets = (snap.polymarket && snap.polymarket.events && snap.polymarket.events.length) ? snap.polymarket : null;
+    state.stocks = (snap.stocks && snap.stocks.countries) ? snap.stocks : null;
     state.source = 'snapshot';
     return true;
   }
@@ -586,6 +588,12 @@
         parts.push('Since the closure the ' + bal.length + ' exporters entirely inside the strait have shipped <b>' + fmtTonnes(bE - bA) +
           '</b> less than their 2025 pace, ' + fmtPct(bA / bE * 100) + '% of normal.');
       }
+    }
+
+    var drawn = stockRows().filter(function (r) { return r.c.region !== 'Gulf' && r.pct < 100; }).slice(0, 2);
+    if (drawn.length === 2) {
+      parts.push('Crude stockpiles are being run down: ' + drawn[0].c.name + ' held <b>' + fmtPct(drawn[0].pct) + '%</b> of its pre-closure crude stock in ' +
+        fmtMonth(drawn[0].month) + ' and ' + drawn[1].c.name + ' <b>' + fmtPct(drawn[1].pct) + '%</b>.');
     }
 
     var head = headlineMarket();
@@ -1209,6 +1217,84 @@
       '. “At the 2025 pace” is the country’s 2025 daily average multiplied by the number of days. Saudi Arabia and the UAE also ship from ports outside the strait, so their national totals include cargo re-routed to Yanbu, Fujairah and Khor Fakkan; the ports panel separates the two.';
   }
 
+  // ---------- Oil stockpiles ----------
+
+  var STOCK_SHOW = 10;   // countries shown before the "Show more" button
+  var STOCK_PRE = '2026-02';   // the last full month before the closure
+
+  function fmtMb(kb) { return fmtNum(kb / 1000, kb >= 10000 ? 0 : 1) + ' Mb'; }
+  function fmtMonth(mo) { return MONTHS[+mo.slice(5, 7) - 1] + ' ' + mo.slice(0, 4); }
+
+  // Per country: latest month-end crude stock against the last month before the closure, plus days of refinery runs.
+  function stockRows() {
+    var s = state.stocks;
+    if (!s || !s.countries) return [];
+    var out = [];
+    s.countries.forEach(function (c) {
+      var ser = c.series || [];
+      if (!ser.length) return;
+      var last = ser[ser.length - 1];
+      var pre = null;
+      for (var i = ser.length - 1; i >= 0; i--) { if (ser[i][0] <= STOCK_PRE) { pre = ser[i]; break; } }
+      if (!pre || pre === last || !pre[1]) return;
+      var mo = last[0];
+      var dim = new Date(Date.UTC(+mo.slice(0, 4), +mo.slice(5, 7), 0)).getUTCDate();
+      var days = last[2] ? last[1] / (last[2] / dim) : null;
+      out.push({ c: c, month: mo, stock: last[1], pre: pre[1], preMonth: pre[0], pct: last[1] / pre[1] * 100, days: days });
+    });
+    out.sort(function (a, b) { return a.pct - b.pct; });
+    return out;
+  }
+
+  function renderStocks() {
+    var box = $('stocks'), note = $('stocks-note');
+    box.innerHTML = '';
+    var rows = stockRows();
+    if (!rows.length) {
+      box.appendChild(el('div', { class: 'empty', text: 'Stock data unavailable.' }));
+      note.textContent = '';
+      return;
+    }
+
+    var importers = rows.filter(function (r) { return r.c.region !== 'Gulf'; });
+    if (importers.length) {
+      var now = 0, pre = 0;
+      importers.forEach(function (r) { now += r.stock; pre += r.pre; });
+      var diff = now - pre;
+      box.appendChild(el('div', { class: 'bal-total' }, [
+        el('div', { class: 'k', text: 'Crude on hand across the ' + importers.length + ' reporting importing countries, each at its latest month' }),
+        el('div', { class: 'v', 'data-dir': diff < 0 ? 'deficit' : 'surplus', html: fmtPct(pre ? now / pre * 100 : 0) + '%<small>of the ' + fmtMonth(STOCK_PRE) + ' level</small>' }),
+        el('div', { class: 's', html: '<b>' + fmtMb(now) + '</b> now against <b>' + fmtMb(pre) + '</b> before the closure, ' + (diff < 0 ? '−' : '+') + fmtMb(Math.abs(diff)) })
+      ]));
+    }
+
+    var shown = state.stocksShowAll ? rows : rows.slice(0, STOCK_SHOW);
+    var cap = Math.max(100, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.pct - 100); })));
+    shown.forEach(function (r) {
+      var down = r.pct < 100;
+      var row = el('div', { class: 'bal-row', 'data-dir': down ? 'deficit' : 'surplus' });
+      row.appendChild(el('div', { class: 'bal-name', html: '<b>' + escapeHtml(r.c.name) + '</b><small>' + escapeHtml(r.c.region) + ' · ' + fmtMonth(r.month) + '</small>' }));
+      var bar = el('div', { class: 'bal-bar', 'aria-hidden': 'true' });
+      bar.appendChild(el('i', { style: 'width:' + (Math.abs(r.pct - 100) / cap * 50).toFixed(1) + '%' }));
+      row.appendChild(bar);
+      row.appendChild(el('div', { class: 'bal-val', html: '<b>' + fmtPct(r.pct) + '%</b><small>of ' + fmtMonth(r.preMonth) + '</small>' }));
+      row.appendChild(el('div', { class: 'bal-sub', text: fmtMb(r.stock) + ' of crude on hand · ' +
+        (r.days ? fmtNum(r.days, 0) + ' days of refinery runs' : 'refinery runs not reported') + ' · ' +
+        (down ? '−' : '+') + fmtMb(Math.abs(r.stock - r.pre)) + ' since ' + fmtMonth(r.preMonth) }));
+      box.appendChild(row);
+    });
+    if (rows.length > shown.length) {
+      var more = el('button', { type: 'button', class: 'btn', text: 'Show ' + (rows.length - shown.length) + ' more countries' });
+      more.addEventListener('click', function () { state.stocksShowAll = true; renderStocks(); });
+      box.appendChild(el('div', { class: 'more' }, [more]));
+    }
+
+    var missing = state.stocks.countries.filter(function (c) { return !(c.series && c.series.length); }).map(function (c) { return c.name; });
+    note.textContent = 'JODI-Oil month-end closing stocks of crude oil, as reported by each government, with refinery intake for the days-of-cover figure; latest month in the dataset ' +
+      fmtMonth(state.stocks.latest) + '. Reporting lags by two to three months and levels may or may not include strategic reserves depending on the country.' +
+      (missing.length ? ' Not reported, so not shown: ' + missing.join(', ') + '.' : '');
+  }
+
   function renderPorts() {
     renderMultiples({
       box: 'ports', tooltip: 'port-tooltip', note: 'ports-note', items: PORTS, groups: PGROUPS,
@@ -1622,6 +1708,7 @@
     renderChokepoints();
     renderCountries();
     renderBalance();
+    renderStocks();
     renderPorts();
     renderBrent();
     renderMarkets();

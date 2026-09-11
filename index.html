@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 
@@ -173,6 +173,17 @@
       </div>
       <div class="balance" id="balance"></div>
       <p class="foot-note" id="balance-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="stk-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="stk-title">Oil stockpiles: how much is left</h2>
+          <p class="sub">Crude oil held in each country at the end of its latest reported month, as a share of the level just before the closure, and how many days of refinery runs it covers.</p>
+        </div>
+      </div>
+      <div class="balance" id="stocks"></div>
+      <p class="foot-note" id="stocks-note"></p>
     </section>
 
     <section class="panel" aria-labelledby="ports-title">
@@ -388,6 +399,7 @@
         <p><strong>Baseline.</strong> The baseline is the mean daily count across calendar year 2025, computed from the same dataset, so like is compared with like. Percentages are of that mean. The chokepoint comparison uses each passage's own 2025 mean.</p>
         <p><strong>Country exports and ports.</strong> Tonnage by country and by port comes from PortWatch's daily trade estimates, which assign each port call an estimated import and export weight from the vessel's type, size and draught change. They are model estimates in metric tonnes, not customs figures, and volatile day to day, which is why the page shows 7-day averages. Saudi Arabia and the UAE also export from ports outside the strait, so their national figures understate the Hormuz effect; the port panel separates the two. Oman lies entirely outside and is shown for contrast.</p>
         <p><strong>Oil price.</strong> Brent is the daily closing price of the front-month ICE Brent futures contract, the figure most news reports quote, taken from Yahoo Finance at each refresh. If that feed is unavailable the builder falls back to the US Energy Information Administration's daily spot price via FRED, which runs about two trading days behind, and the note under the chart says which source is in use.</p>
+        <p><strong>Stockpiles.</strong> Crude stock levels come from the Joint Organisations Data Initiative (JODI-Oil), to which governments report month-end closing stocks of crude oil and refinery intake. Reporting lags by two to three months, so the panel shows each country's latest available month. Levels are as reported and, depending on the country, may or may not include strategic reserves. China and most Gulf producers other than Saudi Arabia and Bahrain do not report, so they cannot be shown. “Days of refinery runs” divides the stock by that month's average daily refinery intake.</p>
         <p><strong>Prediction markets.</strong> Polymarket figures are the last traded price of the “Yes” share in each market, shown as a percentage. They are what traders are willing to pay, not a forecast, and thin markets move on small trades, so the volume is shown alongside. The headline market resolves on the same IMF PortWatch series this page charts, which is why its threshold is compared with the current 7-day average.</p>
         <p><strong>Caveats.</strong> Vessels that switch off their AIS transponders or broadcast false positions are not counted, so true traffic during the crisis may be somewhat higher than shown. Counts are estimates, not official records. The map is a schematic, not a navigational chart. The summary sentence at the top is generated from the figures on the page.</p>
         <p><strong>Timeline and news.</strong> Timeline entries are compiled from public reporting and may be revised as events are clarified. Headlines come from Google News for the search term “Strait of Hormuz”, collected at each refresh, and link to the original publishers. The war tracker below draws on a broader Google News search for the wider conflict and sorts each headline into a category by its wording, so the labels are a rough guide rather than an editorial judgement.</p>
@@ -425,6 +437,6 @@
 
 <script src="data/events.js"></script>
 <script src="data/snapshot.js"></script>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

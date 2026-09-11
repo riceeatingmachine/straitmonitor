@@ -98,6 +98,7 @@ figures and link previews fetch the fresh image. The `og:image`, `og:url` and ca
   open events tagged "iran" whose titles mention the strait, ceasefire, peace deal, blockade or oil, and always tries the
   pinned slugs in `PM_PINNED_SLUGS`. Home networks often block the API; the GitHub runner does not.
 - **News:** Google News RSS for the phrase "Strait of Hormuz", parsed directly by the build script.
+- **Oil stockpiles:** the JODI-Oil primary dataset (a 23 MB zip of monthly country data from jodidata.org), from which the builder keeps month-end closing stocks of crude oil and refinery intake since January 2025 for about thirty countries. The page shows each country's latest month as a share of its February 2026 level and as days of refinery runs.
 - **War tracker:** a second Google News RSS search for the wider Iran war (strikes, missiles, ceasefire, IRGC, blockade, sanctions and so on), up to 40 headlines, merged with the Hormuz headlines and sorted into categories by keyword in the browser.
 - **Timeline:** `data/events.js`, compiled by hand from public reporting.
 

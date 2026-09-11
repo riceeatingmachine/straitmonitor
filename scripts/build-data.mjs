@@ -7,6 +7,7 @@
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { inflateRawSync } from 'node:zlib';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -302,6 +303,85 @@ async function fetchFeed(url, limit) {
 const fetchNews = () => fetchFeed(NEWS_RSS, 20);
 const fetchWarNews = () => fetchFeed(WAR_RSS, 40);
 
+// JODI-Oil primary data: month-end closing stocks of crude oil and refinery intake by country,
+// reported with a two- to three-month lag. One zip with a single large CSV.
+const JODI_ZIP = 'https://www.jodidata.org/_resources/files/downloads/oil-data/world_Primary_CSV.zip';
+const STOCK_COUNTRIES = [
+  ['US', 'United States', 'Americas'], ['JP', 'Japan', 'Asia'], ['KR', 'South Korea', 'Asia'], ['IN', 'India', 'Asia'],
+  ['TW', 'Taiwan', 'Asia'], ['TH', 'Thailand', 'Asia'], ['CN', 'China', 'Asia'], ['SG', 'Singapore', 'Asia'], ['PK', 'Pakistan', 'Asia'],
+  ['TR', 'Turkey', 'Europe'], ['DE', 'Germany', 'Europe'], ['FR', 'France', 'Europe'], ['IT', 'Italy', 'Europe'], ['ES', 'Spain', 'Europe'],
+  ['NL', 'Netherlands', 'Europe'], ['GB', 'United Kingdom', 'Europe'], ['PL', 'Poland', 'Europe'], ['GR', 'Greece', 'Europe'],
+  ['CA', 'Canada', 'Americas'], ['MX', 'Mexico', 'Americas'], ['AU', 'Australia', 'Oceania'],
+  ['SA', 'Saudi Arabia', 'Gulf'], ['AE', 'United Arab Emirates', 'Gulf'], ['KW', 'Kuwait', 'Gulf'], ['IQ', 'Iraq', 'Gulf'],
+  ['QA', 'Qatar', 'Gulf'], ['BH', 'Bahrain', 'Gulf'], ['IR', 'Iran', 'Gulf'], ['OM', 'Oman', 'Gulf']
+];
+
+// Minimal ZIP reader (no dependencies): find the entry whose name matches `pattern` via the central directory and inflate it.
+function zipEntry(buf, pattern) {
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 70000); i--) {
+    if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('ZIP: no central directory');
+  const count = buf.readUInt16LE(eocd + 10);
+  let p = buf.readUInt32LE(eocd + 16);
+  for (let i = 0; i < count; i++) {
+    if (buf.readUInt32LE(p) !== 0x02014b50) throw new Error('ZIP: bad central directory');
+    const method = buf.readUInt16LE(p + 10);
+    const csize = buf.readUInt32LE(p + 20);
+    const n = buf.readUInt16LE(p + 28), m = buf.readUInt16LE(p + 30), k = buf.readUInt16LE(p + 32);
+    const name = buf.toString('utf8', p + 46, p + 46 + n);
+    const local = buf.readUInt32LE(p + 42);
+    if (pattern.test(name)) {
+      const ln = buf.readUInt16LE(local + 26), lm = buf.readUInt16LE(local + 28);
+      const start = local + 30 + ln + lm;
+      const data = buf.subarray(start, start + csize);
+      if (method === 0) return data;
+      if (method === 8) return inflateRawSync(data);
+      throw new Error(`ZIP: unsupported compression method ${method}`);
+    }
+    p += 46 + n + m + k;
+  }
+  throw new Error('ZIP: entry not found');
+}
+
+async function fetchStocks() {
+  const res = await fetch(JODI_ZIP, { headers: { 'User-Agent': 'hormuz-transit-watch/1.0' }, signal: AbortSignal.timeout(180000) });
+  if (!res.ok) throw new Error(`JODI HTTP ${res.status}`);
+  const csv = zipEntry(Buffer.from(await res.arrayBuffer()), /primary.*\.csv$/i);
+  const wanted = new Map(STOCK_COUNTRIES.map((c) => [c[0], { cc: c[0], name: c[1], region: c[2], stock: new Map(), intake: new Map() }]));
+  let latest = '';
+  let start = 0;
+  // Lines look like "JP,2026-06,CRUDEOIL,CLOSTLV,KBBL,268600.0000,3". Only decode the countries we keep.
+  while (start < csv.length) {
+    let end = csv.indexOf(10, start);
+    if (end < 0) end = csv.length;
+    if (csv[start + 2] === 44) {
+      const c = wanted.get(String.fromCharCode(csv[start], csv[start + 1]));
+      if (c) {
+        const f = csv.toString('latin1', start, end).trim().split(',');
+        if (f[2] === 'CRUDEOIL' && f[4] === 'KBBL' && f[1] >= '2025-01' && f[5] !== '-' && f[5] !== '' && f[5] !== 'x') {
+          const v = parseFloat(f[5]);
+          if (!isNaN(v)) {
+            if (f[3] === 'CLOSTLV') { c.stock.set(f[1], v); if (v > 0 && f[1] > latest) latest = f[1]; }
+            else if (f[3] === 'REFINOBS') c.intake.set(f[1], v);
+          }
+        }
+      }
+    }
+    start = end + 1;
+  }
+  const countries = [...wanted.values()].map((c) => {
+    const months = [...new Set([...c.stock.keys(), ...c.intake.keys()])].sort();
+    const series = months
+      .map((mo) => [mo, c.stock.get(mo) ?? null, c.intake.get(mo) ?? null])
+      .filter((r) => r[1] !== null && r[1] > 0);
+    return { cc: c.cc, name: c.name, region: c.region, series };
+  });
+  if (!countries.some((c) => c.series.length)) throw new Error('JODI: no stock rows parsed');
+  return { source: 'JODI-Oil primary data: month-end closing stocks of crude oil and refinery intake, thousand barrels', latest, columns: ['month', 'stock_kbbl', 'intake_kbbl'], countries };
+}
+
 async function loadExisting() {
   try { return JSON.parse(await readFile(jsonPath, 'utf8')); } catch { return null; }
 }
@@ -341,7 +421,8 @@ const snapshot = {
   brent: await section('Brent', fetchBrent, previous?.brent),
   polymarket: await section('Polymarket', fetchPolymarket, previous?.polymarket ?? null),
   news: await section('News', fetchNews, previous?.news),
-  warNews: await section('War news', fetchWarNews, previous?.warNews ?? [])
+  warNews: await section('War news', fetchWarNews, previous?.warNews ?? []),
+  stocks: await section('Oil stocks', fetchStocks, previous?.stocks ?? null)
 };
 
 await mkdir(dataDir, { recursive: true });

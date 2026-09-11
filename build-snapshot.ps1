@@ -195,6 +195,62 @@ try {
   Write-Host "War news items: $($warNews.Count)"
 } catch { Write-Warning "War news failed: $_"; if ($previous -and $previous.warNews) { $warNews = $previous.warNews } }
 
+# 5. Oil stocks from the JODI-Oil primary dataset (month-end closing crude stocks and refinery intake by country)
+$stockCountries = @(
+  @('US','United States','Americas'), @('JP','Japan','Asia'), @('KR','South Korea','Asia'), @('IN','India','Asia'),
+  @('TW','Taiwan','Asia'), @('TH','Thailand','Asia'), @('CN','China','Asia'), @('SG','Singapore','Asia'), @('PK','Pakistan','Asia'),
+  @('TR','Turkey','Europe'), @('DE','Germany','Europe'), @('FR','France','Europe'), @('IT','Italy','Europe'), @('ES','Spain','Europe'),
+  @('NL','Netherlands','Europe'), @('GB','United Kingdom','Europe'), @('PL','Poland','Europe'), @('GR','Greece','Europe'),
+  @('CA','Canada','Americas'), @('MX','Mexico','Americas'), @('AU','Australia','Oceania'),
+  @('SA','Saudi Arabia','Gulf'), @('AE','United Arab Emirates','Gulf'), @('KW','Kuwait','Gulf'), @('IQ','Iraq','Gulf'),
+  @('QA','Qatar','Gulf'), @('BH','Bahrain','Gulf'), @('IR','Iran','Gulf'), @('OM','Oman','Gulf')
+)
+$stocks = $null
+try {
+  $zipPath = Join-Path $env:TEMP 'jodi_primary.zip'
+  $zipDir = Join-Path $env:TEMP 'jodi_primary'
+  Invoke-WebRequest -Uri 'https://www.jodidata.org/_resources/files/downloads/oil-data/world_Primary_CSV.zip' -OutFile $zipPath -UseBasicParsing -UserAgent 'hormuz-transit-watch/1.0'
+  if (Test-Path $zipDir) { Remove-Item -Recurse -Force $zipDir }
+  Expand-Archive -Path $zipPath -DestinationPath $zipDir -Force
+  $csvFile = Get-ChildItem $zipDir -Filter '*.csv' | Select-Object -First 1
+  $want = @{}
+  foreach ($c in $stockCountries) { $want[$c[0]] = @{ stock = @{}; intake = @{} } }
+  $latest = ''
+  $reader = New-Object IO.StreamReader($csvFile.FullName)
+  while ($null -ne ($line = $reader.ReadLine())) {
+    if ($line.Length -lt 3 -or $line[2] -ne ',') { continue }
+    $cc = $line.Substring(0, 2)
+    if (-not $want.ContainsKey($cc)) { continue }
+    $f = $line.Split(',')
+    if ($f.Length -lt 6 -or $f[2] -ne 'CRUDEOIL' -or $f[4] -ne 'KBBL' -or $f[1] -lt '2025-01' -or $f[5] -eq '-' -or $f[5] -eq '' -or $f[5] -eq 'x') { continue }
+    $v = 0.0
+    if (-not [double]::TryParse($f[5], [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$v)) { continue }
+    if ($f[3] -eq 'CLOSTLV') { $want[$cc].stock[$f[1]] = $v; if ($v -gt 0 -and $f[1] -gt $latest) { $latest = $f[1] } }
+    elseif ($f[3] -eq 'REFINOBS') { $want[$cc].intake[$f[1]] = $v }
+  }
+  $reader.Close()
+  $countries = @()
+  foreach ($c in $stockCountries) {
+    $w = $want[$c[0]]
+    $months = @(@($w.stock.Keys) + @($w.intake.Keys) | Sort-Object -Unique)
+    $series = @()
+    foreach ($mo in $months) {
+      if ($w.stock.ContainsKey($mo) -and $w.stock[$mo] -gt 0) {
+        $it = $null; if ($w.intake.ContainsKey($mo)) { $it = $w.intake[$mo] }
+        $series += ,@($mo, $w.stock[$mo], $it)
+      }
+    }
+    $countries += [ordered]@{ cc = $c[0]; name = $c[1]; region = $c[2]; series = $series }
+  }
+  $stocks = [ordered]@{
+    source = 'JODI-Oil primary data: month-end closing stocks of crude oil and refinery intake, thousand barrels'
+    latest = $latest
+    columns = @('month','stock_kbbl','intake_kbbl')
+    countries = $countries
+  }
+  Write-Host "Oil stocks: latest month $latest"
+} catch { Write-Warning "Oil stocks failed: $_"; if ($previous -and $previous.stocks) { $stocks = $previous.stocks } }
+
 $snap = [ordered]@{
   fetchedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
   columns = @('date','n_total','n_tanker','n_container','n_dry_bulk','n_general_cargo','n_roro','capacity','capacity_tanker')
@@ -212,6 +268,7 @@ $snap = [ordered]@{
   polymarket = $polymarket
   news = $news
   warNews = $warNews
+  stocks = $stocks
 }
 $json = $snap | ConvertTo-Json -Depth 6 -Compress
 New-Item -ItemType Directory -Force -Path (Join-Path $root 'data') | Out-Null
