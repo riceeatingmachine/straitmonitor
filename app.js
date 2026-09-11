@@ -108,6 +108,7 @@
   var state = {
     rows: [], baseline: null,
     war: 'all', warItems: [], warShowAll: false,   // war tracker filter, the classified headlines, and whether the list is expanded
+    bmetric: 'export',   // measure shown in the country balance panel
     chokeRecent: [], chokeBaselines: {},
     countryRows: {}, countryBaselines: {},
     portRows: {}, portBaselines: {},
@@ -575,6 +576,16 @@
       hits.sort(function (a, b2) { return a.p - b2.p; });
       parts.push('Among the exporters inside the strait, ' + hits[0].name + ' (<b>' + fmtPct(hits[0].p) + '%</b> of normal) and ' +
         hits[1].name + ' (<b>' + fmtPct(hits[1].p) + '%</b>) are shipping the least.');
+    }
+
+    var bal = countryBalance('export').filter(function (r) { return !r.c.outside && !r.c.partial; });
+    if (bal.length) {
+      var bA = 0, bE = 0;
+      bal.forEach(function (r) { bA += r.actual; bE += r.expected; });
+      if (bE > 0 && bA < bE) {
+        parts.push('Since the closure the ' + bal.length + ' exporters entirely inside the strait have shipped <b>' + fmtTonnes(bE - bA) +
+          '</b> less than their 2025 pace, ' + fmtPct(bA / bE * 100) + '% of normal.');
+      }
     }
 
     var head = headlineMarket();
@@ -1129,6 +1140,75 @@
     });
   }
 
+  // ---------- Country balance since the closure ----------
+
+  // For each country: tonnes shipped since the closure against its 2025 daily average over the same days.
+  function countryBalance(metricKey) {
+    var m = CMETRICS[metricKey];
+    var out = [];
+    COUNTRIES.forEach(function (c) {
+      var rows = state.countryRows[c.key], base = state.countryBaselines[c.key];
+      if (!rows || !rows.length || !base || !base[m.base]) return;
+      var since = rows.filter(function (r) { return r.date >= CRISIS_START; });
+      if (!since.length) return;
+      var actual = 0;
+      since.forEach(function (r) { actual += r[m.key] || 0; });
+      var perDay = base[m.base];
+      var expected = perDay * since.length;
+      out.push({ c: c, days: since.length, last: since[since.length - 1].date, actual: actual, expected: expected, perDay: perDay,
+        diff: actual - expected, pct: expected ? (actual - expected) / expected * 100 : 0 });
+    });
+    out.sort(function (a, b) { return a.pct - b.pct; });
+    return out;
+  }
+
+  function renderBalance() {
+    var box = $('balance'), note = $('balance-note');
+    box.innerHTML = '';
+    var m = CMETRICS[state.bmetric];
+    var rows = countryBalance(state.bmetric);
+    if (!rows.length) {
+      box.appendChild(el('div', { class: 'empty', text: 'Country trade data unavailable.' }));
+      note.textContent = '';
+      return;
+    }
+
+    var inside = rows.filter(function (r) { return !r.c.outside && !r.c.partial; });
+    if (inside.length) {
+      var tA = 0, tE = 0, maxDays = 0;
+      inside.forEach(function (r) { tA += r.actual; tE += r.expected; maxDays = Math.max(maxDays, r.days); });
+      var tDiff = tA - tE;
+      box.appendChild(el('div', { class: 'bal-total' }, [
+        el('div', { class: 'k', text: 'Combined ' + (tDiff < 0 ? 'shortfall' : 'surplus') + ' in ' + m.label + ' · ' + inside.length + ' countries entirely inside the strait' }),
+        el('div', { class: 'v', 'data-dir': tDiff < 0 ? 'deficit' : 'surplus', text: (tDiff < 0 ? '−' : '+') + fmtTonnes(Math.abs(tDiff)) }),
+        el('div', { class: 's', html: '<b>' + fmtTonnes(tA) + '</b> shipped against <b>' + fmtTonnes(tE) + '</b> at the 2025 pace, ' +
+          fmtPct(tE ? tA / tE * 100 : 0) + '% of normal over ' + maxDays + ' days' })
+      ]));
+    }
+
+    var cap = Math.max(100, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.pct); })));
+    rows.forEach(function (r) {
+      var deficit = r.diff < 0;
+      var sign = deficit ? '−' : '+';
+      var w = Math.abs(r.pct) / cap * 50;
+      var row = el('div', { class: 'bal-row', 'data-dir': deficit ? 'deficit' : 'surplus' });
+      var tag = r.c.outside ? 'outside the strait' : r.c.partial ? 'partly outside' : 'inside the strait';
+      row.appendChild(el('div', { class: 'bal-name', html: '<b>' + escapeHtml(r.c.name) + '</b><small>' + tag + '</small>' }));
+      var bar = el('div', { class: 'bal-bar', 'aria-hidden': 'true' });
+      bar.appendChild(el('i', { style: 'width:' + w.toFixed(1) + '%' }));
+      row.appendChild(bar);
+      row.appendChild(el('div', { class: 'bal-val', html: '<b>' + sign + fmtTonnes(Math.abs(r.diff)) + '</b><small>' + sign + fmtPct(Math.abs(r.pct)) + '%</small>' }));
+      var lost = r.perDay ? Math.abs(r.diff) / r.perDay : 0;
+      row.appendChild(el('div', { class: 'bal-sub', text: fmtTonnes(r.actual) + ' shipped · ' + fmtTonnes(r.expected) + ' at the 2025 pace · ' +
+        (deficit ? fmtNum(lost, 0) + ' of ' + r.days + ' days’ worth lost' : fmtNum(lost, 0) + ' extra days’ worth shipped in ' + r.days + ' days') }));
+      box.appendChild(row);
+    });
+
+    var last = rows.reduce(function (a, r) { return r.last > a ? r.last : a; }, '');
+    note.textContent = 'IMF PortWatch daily trade estimates in tonnes, summed from 28 Feb 2026 to ' + fmtDate(last, true) +
+      '. “At the 2025 pace” is the country’s 2025 daily average multiplied by the number of days. Saudi Arabia and the UAE also ship from ports outside the strait, so their national totals include cargo re-routed to Yanbu, Fujairah and Khor Fakkan; the ports panel separates the two.';
+  }
+
   function renderPorts() {
     renderMultiples({
       box: 'ports', tooltip: 'port-tooltip', note: 'ports-note', items: PORTS, groups: PGROUPS,
@@ -1541,6 +1621,7 @@
     renderTimeline();
     renderChokepoints();
     renderCountries();
+    renderBalance();
     renderPorts();
     renderBrent();
     renderMarkets();
@@ -1562,6 +1643,7 @@
   wireSegment('#range-seg', 'data-range', function (v) { state.range = v; writeHash(); renderChart(); });
   wireSegment('#metric-seg', 'data-metric', function (v) { state.metric = v; writeHash(); renderChart(); });
   wireSegment('#cmetric-seg', 'data-cmetric', function (v) { state.cmetric = v; writeHash(); renderCountries(); });
+  wireSegment('#bmetric-seg', 'data-bmetric', function (v) { state.bmetric = v; renderBalance(); });
   wireSegment('#pmetric-seg', 'data-pmetric', function (v) { state.pmetric = v; writeHash(); renderPorts(); });
   wireSegment('#war-seg', 'data-war', function (v) { state.war = v; state.warShowAll = false; renderWarList(); });
   wireSegment('#brent-seg', 'data-brange', function (v) { state.brange = v; writeHash(); renderBrent(); });
@@ -1641,7 +1723,7 @@
     }
   });
   loadChokepoints().then(renderChokepoints).catch(function () {});
-  loadCountries().then(function () { renderCountries(); renderSummary(); }).catch(function () {});
+  loadCountries().then(function () { renderCountries(); renderBalance(); renderSummary(); }).catch(function () {});
   $('news-refresh').addEventListener('click', loadNews);
   loadNews();
   $('war-refresh').addEventListener('click', loadWar);
@@ -1653,7 +1735,7 @@
     lastTraffic = Date.now();
     loadLive().then(afterLive).catch(function () {});
     loadChokepoints().then(renderChokepoints).catch(function () {});
-    loadCountries().then(renderCountries).catch(function () {});
+    loadCountries().then(function () { renderCountries(); renderBalance(); renderSummary(); }).catch(function () {});
   }
   function refreshNews() { lastNews = Date.now(); loadNews(); loadWar(); }
   setInterval(refreshTraffic, TRAFFIC_EVERY);

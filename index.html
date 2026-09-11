@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 
@@ -155,6 +155,24 @@
         <div class="tooltip" id="cty-tooltip" hidden></div>
       </div>
       <p class="foot-note" id="countries-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="bal-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="bal-title">Country balance since the closure</h2>
+          <p class="sub">Tonnes actually shipped since 28 Feb against what each country's 2025 daily average would have delivered over the same days. Left of the line is a shortfall, right is a surplus.</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="bmetric-seg" role="group" aria-label="Trade measure">
+            <button type="button" data-bmetric="export" aria-pressed="true">All exports</button>
+            <button type="button" data-bmetric="export_tanker" aria-pressed="false">Tanker exports</button>
+            <button type="button" data-bmetric="import" aria-pressed="false">Imports</button>
+          </div>
+        </div>
+      </div>
+      <div class="balance" id="balance"></div>
+      <p class="foot-note" id="balance-note"></p>
     </section>
 
     <section class="panel" aria-labelledby="ports-title">
@@ -407,6 +425,6 @@
 
 <script src="data/events.js"></script>
 <script src="data/snapshot.js"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
