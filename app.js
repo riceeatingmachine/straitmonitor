@@ -580,6 +580,12 @@
         hits[1].name + ' (<b>' + fmtPct(hits[1].p) + '%</b>) are shipping the least.');
     }
 
+    var fp = fullPicture();
+    if (fp) {
+      parts.push('In barrels, Gulf liquids reaching world markets are running at about <b>' + fmtNum(fp.mbpd, 1) + ' million a day</b>, <b>' + fmtPct(fp.share * 100) +
+        '%</b> of the pre-war flow' + (fp.tankerShare != null ? ', while only <b>' + fmtPct(fp.tankerShare * 100) + '%</b> of the usual tankers are visible at the strait; the difference is ships running dark or loading beyond it.' : '.'));
+    }
+
     var bal = countryBalance('export').filter(function (r) { return !r.c.outside && !r.c.partial; });
     if (bal.length) {
       var bA = 0, bE = 0;
@@ -1148,6 +1154,87 @@
     });
   }
 
+  // ---------- The full picture: liquids reaching world markets ----------
+
+  var PRE_WAR_MBPD = 20;        // EIA: roughly 20 million barrels a day of petroleum liquids crossed Hormuz in 2024
+  var BBL_PER_TONNE = 7.33;     // crude-oil average; products and gas differ, so barrels here are an equivalent, not a measurement
+  var BYPASS_PORTS = ['port570', 'port362'];   // Yanbu (Red Sea) and Fujairah (Gulf of Oman); Oman comes from its national figure
+
+  function last7(rows, key) { return rows && rows.length ? mean(rows.slice(-7), key) : 0; }
+
+  // PortWatch tanker exports of the eight Gulf states, split into cargo that must cross Hormuz and cargo loaded at
+  // outlets beyond it, each against its 2025 pace; the shares are then scaled to the EIA pre-war flow for a barrels figure.
+  function fullPicture() {
+    var total = 0, totalBase = 0, outside = 0, outsideBase = 0, have = 0, latest = '';
+    COUNTRIES.forEach(function (c) {
+      var r = state.countryRows[c.key], b = state.countryBaselines[c.key];
+      if (!r || !r.length || !b || !b.avg_export_tanker) return;
+      have++;
+      var now = last7(r, 'export_tanker');
+      total += now; totalBase += b.avg_export_tanker;
+      if (c.outside) { outside += now; outsideBase += b.avg_export_tanker; }
+      if (r[r.length - 1].date > latest) latest = r[r.length - 1].date;
+    });
+    if (have < 6 || !totalBase) return null;
+    BYPASS_PORTS.forEach(function (pid) {
+      var r = state.portRows[pid], b = state.portBaselines[pid];
+      if (!r || !r.length || !b || !b.avg_export) return;
+      outside += last7(r, 'export'); outsideBase += b.avg_export;
+    });
+    outside = Math.min(outside, total); outsideBase = Math.min(outsideBase, totalBase);
+    var scale = PRE_WAR_MBPD / totalBase;   // mb/d per tonne-a-day of PortWatch exports
+    var tk = state.rows.length ? mean(state.rows.slice(-7), 'tanker') : null;
+    var tkBase = state.baseline ? state.baseline.tanker : null;
+    return {
+      latest: latest, scale: scale,
+      total: total, totalBase: totalBase, share: total / totalBase, mbpd: total * scale,
+      inside: total - outside, insideBase: totalBase - outsideBase,
+      outside: outside, outsideBase: outsideBase,
+      tankers: tk, tankersBase: tkBase, tankerShare: (tk != null && tkBase) ? tk / tkBase : null
+    };
+  }
+
+  function renderFullPicture() {
+    var box = $('fullpic'), note = $('fullpic-note');
+    box.innerHTML = '';
+    var f = fullPicture();
+    if (!f) {
+      box.appendChild(el('div', { class: 'empty', text: 'Trade data unavailable.' }));
+      note.textContent = '';
+      return;
+    }
+    box.appendChild(el('div', { class: 'bal-total' }, [
+      el('div', { class: 'k', text: 'Gulf liquids reaching world markets by sea · 7-day average to ' + fmtDate(f.latest, false) }),
+      el('div', { class: 'v', 'data-dir': f.share < 1 ? 'deficit' : 'surplus', html: '≈ ' + fmtNum(f.mbpd, 1) + '<small>million barrels a day · ' + fmtPct(f.share * 100) + '% of normal</small>' }),
+      el('div', { class: 's', html: '<b>' + fmtTonnes(f.total) + '</b> a day of tanker exports from the eight Gulf states against <b>' + fmtTonnes(f.totalBase) +
+        '</b> in 2025, scaled to the <b>' + PRE_WAR_MBPD + ' mb/d</b> that crossed Hormuz before the war' })
+    ]));
+
+    function row(name, tag, now, base, sub) {
+      var pct = base ? now / base * 100 : 0, down = pct < 100;
+      var r = el('div', { class: 'bal-row', 'data-dir': down ? 'deficit' : 'surplus' });
+      r.appendChild(el('div', { class: 'bal-name', html: '<b>' + name + '</b><small>' + tag + '</small>' }));
+      var bar = el('div', { class: 'bal-bar', 'aria-hidden': 'true' });
+      bar.appendChild(el('i', { style: 'width:' + (Math.min(100, Math.abs(pct - 100)) / 2).toFixed(1) + '%' }));
+      r.appendChild(bar);
+      r.appendChild(el('div', { class: 'bal-val', html: '<b>' + fmtPct(pct) + '%</b><small>of 2025</small>' }));
+      r.appendChild(el('div', { class: 'bal-sub', text: sub }));
+      box.appendChild(r);
+    }
+    row('Loaded inside the strait', 'must cross Hormuz', f.inside, f.insideBase,
+      '≈ ' + fmtNum(f.inside * f.scale, 1) + ' mb/d equivalent · ' + fmtTonnes(f.inside) + ' a day now, ' + fmtTonnes(f.insideBase) + ' in 2025 · Gulf-state tanker exports less the bypass outlets');
+    row('Bypass outlets', 'Yanbu, Fujairah and Oman', f.outside, f.outsideBase,
+      '≈ ' + fmtNum(f.outside * f.scale, 1) + ' mb/d equivalent · ' + fmtTonnes(f.outside) + ' a day now, ' + fmtTonnes(f.outsideBase) + ' in 2025 · ' +
+      (f.outside >= f.outsideBase ? '+' : '−') + fmtTonnes(Math.abs(f.outside - f.outsideBase)) + ' a day against the 2025 pace');
+    if (f.tankerShare != null) {
+      row('Tankers seen at the strait', 'AIS transits, both directions', f.tankers, f.tankersBase,
+        fmtNum(f.tankers, 1) + ' a day now, ' + fmtNum(f.tankersBase, 0) + ' in 2025 · the gap to the loaded volume above is ships running dark or loading beyond the strait');
+    }
+    note.innerHTML = 'Tonnes are IMF PortWatch model estimates of tanker exports (crude, products and gas together). The barrels figure applies the same share of normal to the EIA’s pre-war Hormuz flow of about ' +
+      PRE_WAR_MBPD + ' million barrels a day; at ' + BBL_PER_TONNE + ' barrels a tonne PortWatch’s 2025 tonnage alone would read lower, so the share is the robust number and the barrels are a scaled equivalent. ' +
+      'Satellite-based trackers that count loadings rather than transponder signals reach broadly similar shares. <a href="methodology.html#full-picture">How this is calculated</a>.';
+  }
+
   // ---------- Country balance since the closure ----------
 
   // For each country: tonnes shipped since the closure against its 2025 daily average over the same days.
@@ -1707,6 +1794,7 @@
     renderTimeline();
     renderChokepoints();
     renderCountries();
+    renderFullPicture();
     renderBalance();
     renderStocks();
     renderPorts();
@@ -1810,7 +1898,7 @@
     }
   });
   loadChokepoints().then(renderChokepoints).catch(function () {});
-  loadCountries().then(function () { renderCountries(); renderBalance(); renderSummary(); }).catch(function () {});
+  loadCountries().then(function () { renderCountries(); renderBalance(); renderFullPicture(); renderSummary(); }).catch(function () {});
   $('news-refresh').addEventListener('click', loadNews);
   loadNews();
   $('war-refresh').addEventListener('click', loadWar);
@@ -1822,7 +1910,7 @@
     lastTraffic = Date.now();
     loadLive().then(afterLive).catch(function () {});
     loadChokepoints().then(renderChokepoints).catch(function () {});
-    loadCountries().then(function () { renderCountries(); renderBalance(); renderSummary(); }).catch(function () {});
+    loadCountries().then(function () { renderCountries(); renderBalance(); renderFullPicture(); renderSummary(); }).catch(function () {});
   }
   function refreshNews() { lastNews = Date.now(); loadNews(); loadWar(); }
   setInterval(refreshTraffic, TRAFFIC_EVERY);

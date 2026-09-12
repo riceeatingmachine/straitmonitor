@@ -1001,6 +1001,30 @@ tbody tr:last-child td { border-bottom: 0; }
 
 td .delta { margin-left: 6px; }
 
+/* ---------- Methodology link and page ---------- */
+
+.live .live-sep { color: var(--muted); }
+.meth-link { color: var(--sea-ink); text-decoration: none; }
+.meth-link:hover { text-decoration: underline; }
+
+.doc { max-width: 860px; margin: 0 auto; padding: 24px 24px 48px; }
+.doc .panel { padding: 8px 26px 22px; }
+.doc h2 { font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.1; margin: 22px 0 8px; }
+.doc h3 { font-family: var(--display); font-weight: 600; font-size: 20px; line-height: 1.15; margin: 18px 0 6px; }
+.doc p, .doc li { font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 74ch; }
+.doc p b, .doc li b { color: var(--ink); }
+.doc ul { padding-left: 20px; margin: 4px 0 10px; }
+.doc li { margin: 3px 0; }
+.doc a { color: var(--sea-ink); }
+.doc .toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: 12px; margin: 10px 0 6px; }
+.doc .toc a { text-decoration: none; }
+.doc .toc a:hover { text-decoration: underline; }
+.doc table { border-collapse: collapse; font-size: 14px; margin: 8px 0 12px; width: 100%; table-layout: fixed; }
+.doc th, .doc td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-family: var(--body); font-size: 14px; line-height: 1.45; white-space: normal; color: var(--ink-2); }
+.doc td b { color: var(--ink); }
+.doc th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.doc .back { font-family: var(--mono); font-size: 12px; margin-bottom: 12px; display: inline-block; }
+
 /* ---------- Country balance ---------- */
 
 .balance { padding: 8px 18px 4px; }

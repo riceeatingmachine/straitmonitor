@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 
@@ -46,7 +46,7 @@
       <div class="eyebrow">Strait of Hormuz · 26°34′N 56°15′E · straitmonitor.com</div>
       <h1>Hormuz Transit Watch</h1>
       <p>Commercial vessels crossing the strait each day, measured against the 2025 baseline, with the latest reporting alongside.</p>
-      <div class="live"><span class="live-dot" id="live-dot" data-state="saved"></span><span id="live-text">Loading…</span></div>
+      <div class="live"><span class="live-dot" id="live-dot" data-state="saved"></span><span id="live-text">Loading…</span><span class="live-sep">·</span><a class="meth-link" href="methodology.html">Methodology</a></div>
     </div>
     <div class="status">
       <span class="status-pill" id="status-pill" data-level="">
@@ -129,6 +129,17 @@
         <div class="tooltip" id="tooltip" hidden></div>
       </div>
       <ol class="events" id="events" aria-label="Key events marked on the chart"></ol>
+    </section>
+
+    <section class="panel" aria-labelledby="fp-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="fp-title">The full picture: oil reaching world markets</h2>
+          <p class="sub">Ship counts at the strait miss tankers that sail dark and cargo that leaves by pipeline to the Red Sea or Gulf of Oman. This combines what the Gulf states actually load, wherever it leaves, and puts it in barrels.</p>
+        </div>
+      </div>
+      <div class="balance" id="fullpic"></div>
+      <p class="foot-note" id="fullpic-note"></p>
     </section>
 
     <section class="panel" aria-labelledby="cp-title">
@@ -406,13 +417,14 @@
 
     <section class="panel" aria-labelledby="notes-title">
       <div class="panel-head">
-        <div><h2 id="notes-title">About the numbers</h2></div>
+        <div><h2 id="notes-title">About the numbers</h2><p class="sub">Short version. <a href="methodology.html">Read the full methodology</a>, including how counts compare with flow estimates.</p></div>
       </div>
       <div class="notes">
         <p><strong>Traffic.</strong> Transit counts come from the IMF's <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">PortWatch</a> chokepoint dataset, which estimates daily transit calls from satellite AIS positions. Figures are published with a lag of a few days, so the latest day shown is usually 3 to 5 days behind today. A scheduled job refreshes this site's data twice a day; the time of the last refresh is shown in the header.</p>
         <p><strong>Baseline.</strong> The baseline is the mean daily count across calendar year 2025, computed from the same dataset, so like is compared with like. Percentages are of that mean. The chokepoint comparison uses each passage's own 2025 mean.</p>
         <p><strong>Country exports and ports.</strong> Tonnage by country and by port comes from PortWatch's daily trade estimates, which assign each port call an estimated import and export weight from the vessel's type, size and draught change. They are model estimates in metric tonnes, not customs figures, and volatile day to day, which is why the page shows 7-day averages. Saudi Arabia and the UAE also export from ports outside the strait, so their national figures understate the Hormuz effect; the port panel separates the two. Oman lies entirely outside and is shown for contrast.</p>
         <p><strong>Oil price.</strong> Brent is the daily closing price of the front-month ICE Brent futures contract, the figure most news reports quote, taken from Yahoo Finance at each refresh. If that feed is unavailable the builder falls back to the US Energy Information Administration's daily spot price via FRED, which runs about two trading days behind, and the note under the chart says which source is in use.</p>
+        <p><strong>The full picture.</strong> Transit counts undercount oil flows, because tankers switch off their transponders and because Saudi and Emirati crude leaves by pipeline to Yanbu and Fujairah. The full-picture panel therefore starts from PortWatch's estimated tanker exports of all eight Gulf states, wherever the cargo leaves, splits them into cargo that must cross Hormuz and cargo loaded at the bypass outlets, and expresses each as a share of its 2025 pace. The barrels figure applies that share to the EIA's pre-war Hormuz flow of about 20 million barrels a day, so it is a scaled equivalent rather than a direct measurement.</p>
         <p><strong>Stockpiles.</strong> Crude stock levels come from the Joint Organisations Data Initiative (JODI-Oil), to which governments report month-end closing stocks of crude oil and refinery intake. Reporting lags by two to three months, so the panel shows each country's latest available month. Levels are as reported and, depending on the country, may or may not include strategic reserves. China and most Gulf producers other than Saudi Arabia and Bahrain do not report, so they cannot be shown. “Days of refinery runs” divides the stock by that month's average daily refinery intake.</p>
         <p><strong>Prediction markets.</strong> Polymarket figures are the last traded price of the “Yes” share in each market, shown as a percentage. They are what traders are willing to pay, not a forecast, and thin markets move on small trades, so the volume is shown alongside. The headline market resolves on the same IMF PortWatch series this page charts, which is why its threshold is compared with the current 7-day average.</p>
         <p><strong>Caveats.</strong> Vessels that switch off their AIS transponders or broadcast false positions are not counted, so true traffic during the crisis may be somewhat higher than shown. Counts are estimates, not official records. The map is a schematic, not a navigational chart. The summary sentence at the top is generated from the figures on the page.</p>
@@ -451,6 +463,6 @@
 
 <script src="data/events.js?v=202609111838"></script>
 <script src="data/snapshot.js?v=202609111838"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

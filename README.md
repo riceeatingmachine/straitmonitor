@@ -90,6 +90,7 @@ third-party script on the page; remove that block to run without analytics.
   Daily transit calls estimated from satellite AIS; published with a lag of roughly 3 to 5 days.
 - **Baseline:** mean daily count over calendar year 2025 from the same dataset (about 85.5 transits a day,
   48 of them tankers). The chokepoint comparison uses each passage's own 2025 mean.
+- **The full picture:** computed in the browser from the country and port trade rows: tanker exports of all eight Gulf states (7-day average) as a share of their 2025 pace, split into cargo loaded at the bypass outlets (Yanbu, Fujairah, Oman) and the remainder that must cross Hormuz, with the share scaled to the EIA's pre-war Hormuz flow (`PRE_WAR_MBPD`, 20 million b/d) for a barrels-a-day equivalent. `methodology.html` explains it and compares counts with flow estimates.
 - **Country balance:** computed in the browser from the same country trade rows: tonnes shipped since 28 Feb 2026 against the country's 2025 daily average times the number of days, shown as a shortfall or surplus per country and combined for the states entirely inside the strait.
 - **Country exports:** IMF PortWatch "Daily Trade Data" (country level, `Daily_Trade_Data_REG`), estimated
   import and export tonnes per day for Qatar, Kuwait, Iraq, Bahrain, Iran, Saudi Arabia, the UAE and Oman,

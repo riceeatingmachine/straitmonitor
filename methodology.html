@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4L4W1HVJ27"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-4L4W1HVJ27');
+  </script>
+  <title>Methodology · Hormuz Transit Watch</title>
+  <meta name="description" content="How straitmonitor.com measures traffic through the Strait of Hormuz: the data sources, the 2025 baseline, the barrels conversion, oil stockpiles, and how ship counts compare with flow estimates.">
+  <link rel="canonical" href="https://straitmonitor.com/methodology.html">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#0c1820">
+  <meta property="og:url" content="https://straitmonitor.com/methodology.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Methodology · Hormuz Transit Watch">
+  <meta property="og:description" content="Data sources, baseline, the barrels conversion, and how ship counts compare with flow estimates.">
+  <meta property="og:image" content="https://straitmonitor.com/og-image.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="styles.css?v=7">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <div class="eyebrow">Strait of Hormuz · 26°34′N 56°15′E · straitmonitor.com</div>
+      <h1>Methodology</h1>
+      <p>Where every number on the tracker comes from, what it can and cannot tell you, and how counting ships compares with estimating barrels.</p>
+      <div class="live"><a class="meth-link" href="./">← Back to the tracker</a></div>
+    </div>
+  </div>
+</header>
+
+<main class="doc">
+  <section class="panel">
+    <nav class="toc" aria-label="Sections">
+      <a href="#principles">Principles</a>
+      <a href="#traffic">Traffic counts</a>
+      <a href="#baseline">Baseline</a>
+      <a href="#trade">Country and port trade</a>
+      <a href="#full-picture">The full picture and barrels</a>
+      <a href="#counts-vs-flows">Counts versus flows</a>
+      <a href="#stockpiles">Oil stockpiles</a>
+      <a href="#brent">Brent</a>
+      <a href="#markets">Prediction markets</a>
+      <a href="#news">News, war tracker and timeline</a>
+      <a href="#caveats">Caveats</a>
+      <a href="#refresh">Refresh cycle</a>
+    </nav>
+
+    <h2 id="principles">Principles</h2>
+    <p>Every figure on the tracker is computed from a <b>public, documented dataset</b> that anyone can download and check. Nothing is estimated by hand, and no number is entered manually except the timeline of events. The page is a static file; a scheduled job rebuilds the data twice a day and commits it to the <a href="https://github.com/riceeatingmachine/straitmonitor" target="_blank" rel="noopener">public repository</a>, so the exact data behind any day's page is in the git history.</p>
+
+    <h2 id="traffic">Traffic counts</h2>
+    <p>Daily transit counts come from the IMF's <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">PortWatch</a> "Daily Chokepoints" dataset (port id <code>chokepoint6</code>), which estimates the number of commercial vessels crossing the strait each day from satellite AIS positions, broken down into tankers, container ships, dry bulk, general cargo and ro-ro, plus the combined deadweight tonnage. Counts cover <b>both directions</b>. PortWatch publishes with a lag of roughly three to five days, so the latest day shown is usually a few days behind today.</p>
+    <p>The headline "share of normal" is the 7-day average of all transits divided by the 2025 baseline. The key-figure tiles show the latest day, the 7-day average, tankers and deadweight tonnage on the same basis.</p>
+
+    <h2 id="baseline">Baseline</h2>
+    <p>The baseline is the <b>mean daily count across calendar year 2025</b>, from the same dataset, so like is compared with like. It works out to about 85 transits a day, 48 of them tankers, and about 3.2 million deadweight tonnes. The chokepoint comparison panel uses each passage's own 2025 mean in the same way. The closure date, 28 February 2026, is the day of the first strikes; every "since the closure" figure sums from that day.</p>
+
+    <h2 id="trade">Country and port trade</h2>
+    <p>Export and import tonnes by country and by port come from PortWatch's "Daily Trade" datasets. PortWatch assigns each port call an estimated import and export weight from the vessel's type, size and change in draught. They are <b>model estimates in metric tonnes</b>, not customs figures, and they are volatile from day to day, which is why the page shows 7-day averages. "Tanker exports" is the subset carried by tankers, which covers crude, refined products and gas.</p>
+    <p>The country balance panel sums the tonnes actually shipped since the closure and compares them with the country's 2025 daily average multiplied by the number of days, giving a shortfall or surplus per country. Saudi Arabia and the UAE also ship from ports outside the strait (Yanbu on the Red Sea; Fujairah and Khor Fakkan on the Gulf of Oman), so their national totals include re-routed cargo. The ports panel separates the two by tracking those outlets individually.</p>
+
+    <h2 id="full-picture">The full picture and the barrels figure</h2>
+    <p>Ship counts at the strait undercount oil for two reasons: tankers can switch off or spoof their AIS transponders while transiting, and Saudi and Emirati crude can leave the region by pipeline without crossing Hormuz at all. The full-picture panel therefore does not start from transits. It starts from what the Gulf states <b>actually load onto tankers</b>, wherever the cargo leaves:</p>
+    <ul>
+      <li><b>Total reaching markets</b> is the 7-day average of tanker exports across all eight Gulf states (Qatar, Kuwait, Iraq, Bahrain, Iran, Saudi Arabia, the UAE and Oman) as a share of their combined 2025 daily average.</li>
+      <li><b>Bypass outlets</b> are Yanbu, Fujairah and Oman's national exports, again against their 2025 pace. The change against 2025 is the incremental volume the bypass routes are carrying.</li>
+      <li><b>Loaded inside the strait</b> is the remainder: total less bypass, which is the cargo that must cross Hormuz.</li>
+      <li><b>Tankers seen at the strait</b> is shown alongside so the gap between visible transits and loaded volume is explicit. That gap is ships running dark plus cargo leaving by the bypass routes.</li>
+    </ul>
+    <p>To express this in barrels, the share of normal is applied to the <b>EIA's estimate of pre-war flow through Hormuz, about 20 million barrels a day</b> of petroleum liquids. A direct conversion of PortWatch tonnes at 7.33 barrels per tonne would read lower than that, because the PortWatch model does not capture every cargo and the tanker category mixes crude, products and gas with different densities. The share of normal is therefore the robust number; the barrels are a scaled equivalent, and both the share and the underlying tonnes are shown next to it.</p>
+
+    <h2 id="counts-vs-flows">Counts versus flows: how this compares with other trackers</h2>
+    <p>Two families of Hormuz trackers exist, and they answer different questions.</p>
+    <table>
+      <tr><th>Approach</th><th>What it measures</th><th>Strengths</th><th>Weaknesses</th></tr>
+      <tr><td><b>Transponder counts</b> (this site)</td><td>Vessels whose AIS signal PortWatch places in the strait each day</td><td>Public, official, consistent since 2019, covers every ship type, cheap to refresh twice a day</td><td>Misses dark ships; a count says nothing about how full a tanker is; lags three to five days</td></tr>
+      <tr><td><b>Flow estimates</b> (satellite and downstream AIS trackers, for example <a href="https://hormuzstraittracker.com/" target="_blank" rel="noopener">Hormuz Strait Tracker</a>)</td><td>Barrels per day, inferred from loading activity seen in satellite imagery and from laden tankers spotted downstream once they switch AIS back on</td><td>Captures dark ships and cargo volume; closer to what markets receive</td><td>Proprietary analysis with judgement calls; scaled to an assumed pre-war flow; recent data often paywalled</td></tr>
+    </table>
+    <p>Because a transponder count will always undercount during a crisis in which ships deliberately hide, this site's headline share of transits should be read as a <b>lower bound on activity at the strait</b>, and the full-picture panel as the closer estimate of oil reaching markets. When the two families of tracker are compared on the same basis, total Gulf liquids reaching markets as a share of pre-war, they have tended to land in the same range, which is a useful cross-check on both.</p>
+
+    <h2 id="stockpiles">Oil stockpiles</h2>
+    <p>Crude stock levels come from the <a href="https://www.jodidata.org/" target="_blank" rel="noopener">Joint Organisations Data Initiative</a> (JODI-Oil), to which governments report month-end closing stocks of crude oil and monthly refinery intake. Reporting lags by two to three months, so each country is shown at its latest available month, compared with February 2026, the last full month before the closure. "Days of refinery runs" divides the stock by that month's average daily refinery intake. Levels are as reported and, depending on the country, may or may not include strategic reserves. China and most Gulf producers other than Saudi Arabia and Bahrain do not report stocks to JODI, so they cannot be shown; the panel names them rather than estimating.</p>
+
+    <h2 id="brent">Brent</h2>
+    <p>Brent is the daily closing price of the front-month ICE Brent futures contract (ticker BZ=F), the figure most news reports quote, from Yahoo Finance at each refresh. If that feed is unavailable, the builder falls back to the US Energy Information Administration's daily Brent spot price via FRED, which runs about two trading days behind; the note under the chart says which source is in use. "Since the closure" compares with the last close before 28 February 2026.</p>
+
+    <h2 id="markets">Prediction markets</h2>
+    <p>Polymarket figures are the last traded price of the "Yes" share in each market, read as an implied probability, from Polymarket's public Gamma API. They are what traders are willing to pay, not a forecast, and thin markets move on small trades, so the traded volume is shown alongside. The headline market resolves on the same PortWatch series this site charts, which is why its threshold is compared with the current 7-day average.</p>
+
+    <h2 id="news">News, war tracker and timeline</h2>
+    <p>Headlines come from Google News RSS: one search for the phrase "Strait of Hormuz", and a broader one for the wider war (strikes, missiles, ceasefire, IRGC, blockade, drones, navy, CENTCOM, sanctions) that feeds the war tracker. The tracker merges the two, removes duplicates, and sorts each headline into a category by keywords in its title, so the labels are a rough guide rather than an editorial judgement. Timeline entries are compiled by hand from public reporting and may be revised as events are clarified.</p>
+
+    <h2 id="caveats">Caveats</h2>
+    <ul>
+      <li>Vessels that switch off their AIS transponders or broadcast false positions are not counted, so true traffic during the crisis is higher than shown.</li>
+      <li>All tonnage figures are model estimates, not measured cargo.</li>
+      <li>The barrels figure is a scaled equivalent based on the EIA's pre-war flow, not a count of barrels.</li>
+      <li>The map is a schematic, not a navigational chart.</li>
+      <li>The summary sentence at the top of the tracker is generated from the figures on the page.</li>
+    </ul>
+
+    <h2 id="refresh">Refresh cycle</h2>
+    <p>A scheduled job runs at 03:17 and 15:17 UTC. It fetches every source, writes the data file, redraws the social preview cards from the fresh numbers and commits the result. The time of the last refresh is shown in the page header. An open tab checks for newer data once an hour. The code, the builder and every past data file are in the <a href="https://github.com/riceeatingmachine/straitmonitor" target="_blank" rel="noopener">repository</a>.</p>
+  </section>
+</main>
+
+</body>
+</html>
