@@ -79,6 +79,15 @@ odds. The workflow re-runs the script after every data refresh and stamps the da
 figures and link previews fetch the fresh image. The `og:image`, `og:url` and canonical tags point at
 `https://straitmonitor.com/`; change them if the site ever moves.
 
+## When a refresh fails
+
+Every PortWatch query is retried up to four times with a growing pause, because the ArcGIS service behind it has
+short outages. Each section of the snapshot falls back to the previously saved data if its source is still
+unreachable, including the Hormuz series itself, in which case the Actions run shows a warning annotation instead
+of failing. A run only fails outright if there is no previous data to keep. If you get a "run failed" email from
+GitHub, open the run: a failure in "Fetch PortWatch and news" means a source was down; the next scheduled run
+(twice a day) will pick up where it left off, and the site keeps serving the last good snapshot in the meantime.
+
 ## Analytics
 
 `index.html` loads Google Analytics (gtag.js, property `G-4L4W1HVJ27`) at the top of `<head>`. It is the only

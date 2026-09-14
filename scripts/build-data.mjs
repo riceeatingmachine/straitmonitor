@@ -30,14 +30,30 @@ const WAR_RSS = 'https://news.google.com/rss/search?q=Iran+(war+OR+strike+OR+str
 const COLUMNS = ['date', 'n_total', 'n_tanker', 'n_container', 'n_dry_bulk', 'n_general_cargo', 'n_roro', 'capacity', 'capacity_tanker'];
 const CHOKE_COLUMNS = ['date', 'portid', 'portname', 'n_total', 'n_tanker', 'capacity'];
 
-async function query(params, base = BASE) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// The ArcGIS service behind PortWatch has short outages; retry each query a few times before giving up.
+async function query(params, base = BASE, attempts = 4) {
   const url = base + '?' + new URLSearchParams({ ...params, f: 'json' });
-  const res = await fetch(url, { headers: { 'User-Agent': 'hormuz-transit-watch/1.0' }, signal: AbortSignal.timeout(60000) });
-  if (!res.ok) throw new Error(`PortWatch HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.error) throw new Error(`PortWatch error: ${JSON.stringify(json.error)}`);
-  if (!Array.isArray(json.features)) throw new Error('PortWatch: no features');
-  return json.features.map((f) => f.attributes);
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'hormuz-transit-watch/1.0' }, signal: AbortSignal.timeout(60000) });
+      if (!res.ok) throw new Error(`PortWatch HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.error) throw new Error(`PortWatch error: ${JSON.stringify(json.error)}`);
+      if (!Array.isArray(json.features)) throw new Error('PortWatch: no features');
+      return json.features.map((f) => f.attributes);
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts) {
+        const wait = 5000 * i;
+        console.warn(`PortWatch query failed (${err.message}); retry ${i}/${attempts - 1} in ${wait / 1000}s`);
+        await sleep(wait);
+      }
+    }
+  }
+  throw lastErr;
 }
 
 function isoDate(v) {
@@ -402,7 +418,17 @@ async function section(name, fn, fallback) {
 
 const previous = await loadExisting();
 
-const rows = await fetchHormuz(); // must succeed
+// The Hormuz series is the one thing the page cannot do without. If PortWatch is down even after retries,
+// keep the previous series so the rest of the refresh (news, Brent, markets, stocks) still lands, and raise a
+// visible warning in the Actions run rather than failing it. With no previous data at all, fail.
+let rows;
+try {
+  rows = await fetchHormuz();
+} catch (err) {
+  if (!previous?.rows?.length) throw err;
+  rows = previous.rows;
+  console.log(`::warning::Hormuz series: PortWatch unavailable (${err.message}); kept the previous ${rows.length} rows ending ${rows[rows.length - 1][0]}`);
+}
 console.log(`Hormuz series: ${rows.length} rows, ${rows[0][0]} to ${rows[rows.length - 1][0]}`);
 
 const snapshot = {
