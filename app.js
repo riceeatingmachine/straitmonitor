@@ -1686,6 +1686,10 @@
 
   function warKey(title) { return String(title || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').slice(0, 80); }
 
+  // The broad feed matches "Iran" anywhere in an article, which lets in unrelated stories (a Baltic drone incident,
+  // Ukraine items); keep only headlines that themselves name the conflict, the region or the oil market.
+  var WAR_RELEVANT = /iran|islamic republic|tehran|hormuz|gulf|houthi|yemen|red sea|irgc|khamenei|centcom|strait|tanker|opec|brent|crude|\boil\b|israel|middle east|persian|saudi|kuwait|qatar|bahrain|\buae\b|emirat|oman|iraq|bab.el.mandeb|fujairah|yanbu/i;
+
   function dayLabel(dateStr) {
     var t = Date.parse(dateStr || '');
     if (isNaN(t)) return 'Undated';
@@ -1701,7 +1705,7 @@
     items.forEach(function (it) {
       var t = it.source ? { headline: it.title || '', source: it.source } : splitTitle(it.title || '');
       var key = warKey(t.headline);
-      if (!t.headline || seen[key]) return;
+      if (!t.headline || seen[key] || !WAR_RELEVANT.test(t.headline)) return;
       seen[key] = true;
       var cat = classifyWar(t.headline);
       out.push({ headline: t.headline, source: t.source, link: it.link, pubDate: it.pubDate, cat: cat.key, label: cat.label });

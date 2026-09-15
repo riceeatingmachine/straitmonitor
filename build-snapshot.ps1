@@ -5,6 +5,8 @@ $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $base = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query'
+# ArcGIS Online caches identical query URLs at its edge; a changing parameter makes every run fetch fresh data.
+$bust = "&_ts=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
 $jsonPath = Join-Path $root 'data\snapshot.json'
 $jsPath = Join-Path $root 'data\snapshot.js'
 
