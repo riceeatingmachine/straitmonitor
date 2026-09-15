@@ -34,11 +34,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // The ArcGIS service behind PortWatch has short outages; retry each query a few times before giving up.
 async function query(params, base = BASE, attempts = 4) {
-  const url = base + '?' + new URLSearchParams({ ...params, f: 'json' });
   let lastErr;
   for (let i = 1; i <= attempts; i++) {
+    // ArcGIS Online caches query responses at its edge and can serve a days-old answer for an identical URL;
+    // a changing parameter plus no-cache headers make every run fetch fresh data.
+    const url = base + '?' + new URLSearchParams({ ...params, f: 'json', _ts: String(Date.now()) });
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': 'hormuz-transit-watch/1.0' }, signal: AbortSignal.timeout(60000) });
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'hormuz-transit-watch/1.0', 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(60000)
+      });
       if (!res.ok) throw new Error(`PortWatch HTTP ${res.status}`);
       const json = await res.json();
       if (json.error) throw new Error(`PortWatch error: ${JSON.stringify(json.error)}`);

@@ -13,7 +13,7 @@ if (Test-Path $jsonPath) { try { $previous = Get-Content $jsonPath -Raw | Conver
 
 # 1. Hormuz daily series since 2025-01-01 (must succeed)
 $u = "${base}?where=portid%3D%27chokepoint6%27+AND+date+%3E%3D+DATE+%272025-01-01%27&outFields=date,n_total,n_tanker,n_container,n_dry_bulk,n_general_cargo,n_roro,capacity,capacity_tanker&orderByFields=date+ASC&resultRecordCount=2000&f=json"
-$r = Invoke-RestMethod -Uri $u -UseBasicParsing
+$r = Invoke-RestMethod -Uri ($u + $bust) -UseBasicParsing
 $rows = @($r.features | ForEach-Object { $a = $_.attributes; ,@($a.date, $a.n_total, $a.n_tanker, $a.n_container, $a.n_dry_bulk, $a.n_general_cargo, $a.n_roro, $a.capacity, $a.capacity_tanker) })
 if ($rows.Count -lt 300) { throw "Hormuz series unexpectedly short ($($rows.Count) rows)" }
 Write-Host "Hormuz rows: $($rows.Count) ($($rows[0][0]) to $($rows[-1][0]))"
@@ -22,7 +22,7 @@ Write-Host "Hormuz rows: $($rows.Count) ($($rows[0][0]) to $($rows[-1][0]))"
 $recent = $null
 try {
   $u2 = "${base}?where=date+%3E%3D+CURRENT_DATE+-+14&outFields=date,portid,portname,n_total,n_tanker,capacity&orderByFields=date+ASC&resultRecordCount=2000&f=json"
-  $r2 = Invoke-RestMethod -Uri $u2 -UseBasicParsing
+  $r2 = Invoke-RestMethod -Uri ($u2 + $bust) -UseBasicParsing
   $recent = @($r2.features | ForEach-Object { $a = $_.attributes; ,@($a.date, $a.portid, $a.portname, $a.n_total, $a.n_tanker, $a.capacity) })
   Write-Host "Recent chokepoint rows: $($recent.Count)"
 } catch { Write-Warning "Chokepoint recent failed: $_"; if ($previous) { $recent = $previous.chokepointRecent } }
@@ -32,7 +32,7 @@ $baselines = $null
 try {
   $stats = '[{"statisticType":"avg","onStatisticField":"n_total","outStatisticFieldName":"avg_total"},{"statisticType":"avg","onStatisticField":"n_tanker","outStatisticFieldName":"avg_tanker"},{"statisticType":"avg","onStatisticField":"capacity","outStatisticFieldName":"avg_capacity"}]'
   $u3 = "${base}?where=year%3D2025&groupByFieldsForStatistics=portid,portname&outStatistics=$([Uri]::EscapeDataString($stats))&f=json"
-  $r3 = Invoke-RestMethod -Uri $u3 -UseBasicParsing
+  $r3 = Invoke-RestMethod -Uri ($u3 + $bust) -UseBasicParsing
   $baselines = @($r3.features | ForEach-Object { $a = $_.attributes; [ordered]@{ portid = $a.portid; portname = $a.portname; avg_total = $a.avg_total; avg_tanker = $a.avg_tanker; avg_capacity = $a.avg_capacity } })
   Write-Host "Chokepoint baselines: $($baselines.Count)"
 } catch { Write-Warning "Chokepoint baselines failed: $_"; if ($previous) { $baselines = $previous.chokepointBaselines } }
@@ -47,13 +47,13 @@ try {
   foreach ($iso in $isoList) {
     $w = [Uri]::EscapeDataString("ISO3='$iso' AND date >= DATE '2026-01-01'")
     $uc = "${tradeBase}?where=$w&outFields=date,export,export_tanker,import&orderByFields=date+ASC&resultRecordCount=2000&f=json"
-    $rc = Invoke-RestMethod -Uri $uc -UseBasicParsing
+    $rc = Invoke-RestMethod -Uri ($uc + $bust) -UseBasicParsing
     $countryRows += @($rc.features | ForEach-Object { $a = $_.attributes; ,@($iso, $a.date, $a.export, $a.export_tanker, $a.import) })
   }
   $inList = "ISO3 IN ('" + ($isoList -join "','") + "')"
   $cstats = '[{"statisticType":"avg","onStatisticField":"export","outStatisticFieldName":"avg_export"},{"statisticType":"avg","onStatisticField":"export_tanker","outStatisticFieldName":"avg_export_tanker"},{"statisticType":"avg","onStatisticField":"import","outStatisticFieldName":"avg_import"}]'
   $ub = "${tradeBase}?where=$([Uri]::EscapeDataString("$inList AND date >= DATE '2025-01-01' AND date <= DATE '2025-12-31'"))&groupByFieldsForStatistics=ISO3,country&outStatistics=$([Uri]::EscapeDataString($cstats))&f=json"
-  $rb = Invoke-RestMethod -Uri $ub -UseBasicParsing
+  $rb = Invoke-RestMethod -Uri ($ub + $bust) -UseBasicParsing
   $countryBaselines = @($rb.features | ForEach-Object { $a = $_.attributes; [ordered]@{ iso3 = $a.ISO3; country = $a.country; avg_export = $a.avg_export; avg_export_tanker = $a.avg_export_tanker; avg_import = $a.avg_import } })
   if ($countryRows.Count -lt 100 -or $countryBaselines.Count -lt 5) { throw "Country trade data unexpectedly small" }
   Write-Host "Country trade rows: $($countryRows.Count); baselines: $($countryBaselines.Count)"
@@ -69,13 +69,13 @@ try {
   foreach ($portId in $portIds) {
     $w = [Uri]::EscapeDataString("portid='$portId' AND date >= DATE '2026-01-01'")
     $up = "${portsBase}?where=$w&outFields=date,export,import,portcalls&orderByFields=date+ASC&resultRecordCount=2000&f=json"
-    $rp = Invoke-RestMethod -Uri $up -UseBasicParsing -TimeoutSec 60
+    $rp = Invoke-RestMethod -Uri ($up + $bust) -UseBasicParsing -TimeoutSec 60
     $portRows += @($rp.features | ForEach-Object { $a = $_.attributes; ,@($portId, $a.date, $a.export, $a.import, $a.portcalls) })
   }
   $pin = "portid IN ('" + ($portIds -join "','") + "')"
   $pstats = '[{"statisticType":"avg","onStatisticField":"export","outStatisticFieldName":"avg_export"},{"statisticType":"avg","onStatisticField":"import","outStatisticFieldName":"avg_import"},{"statisticType":"avg","onStatisticField":"portcalls","outStatisticFieldName":"avg_calls"}]'
   $ub = "${portsBase}?where=$([Uri]::EscapeDataString("year=2025 AND $pin"))&groupByFieldsForStatistics=portid,portname,country&outStatistics=$([Uri]::EscapeDataString($pstats))&f=json"
-  $rb = Invoke-RestMethod -Uri $ub -UseBasicParsing -TimeoutSec 60
+  $rb = Invoke-RestMethod -Uri ($ub + $bust) -UseBasicParsing -TimeoutSec 60
   $portBaselines = @($rb.features | ForEach-Object { $a = $_.attributes; [ordered]@{ portid = $a.portid; portname = $a.portname; country = $a.country; avg_export = $a.avg_export; avg_import = $a.avg_import; avg_calls = $a.avg_calls } })
   if ($portRows.Count -lt 100 -or $portBaselines.Count -lt 5) { throw "Port data unexpectedly small" }
   Write-Host "Port rows: $($portRows.Count); baselines: $($portBaselines.Count)"
