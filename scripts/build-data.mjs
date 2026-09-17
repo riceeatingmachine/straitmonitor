@@ -370,6 +370,8 @@ function zipEntry(buf, pattern) {
 async function fetchStocks() {
   const res = await fetch(JODI_ZIP, { headers: { 'User-Agent': 'hormuz-transit-watch/1.0' }, signal: AbortSignal.timeout(180000) });
   if (!res.ok) throw new Error(`JODI HTTP ${res.status}`);
+  const lm = Date.parse(res.headers.get('last-modified') || '');
+  const sourceUpdated = isNaN(lm) ? null : new Date(lm).toISOString().slice(0, 10);
   const csv = zipEntry(Buffer.from(await res.arrayBuffer()), /primary.*\.csv$/i);
   const wanted = new Map(STOCK_COUNTRIES.map((c) => [c[0], { cc: c[0], name: c[1], region: c[2], stock: new Map(), intake: new Map() }]));
   let latest = '';
@@ -401,7 +403,7 @@ async function fetchStocks() {
     return { cc: c.cc, name: c.name, region: c.region, series };
   });
   if (!countries.some((c) => c.series.length)) throw new Error('JODI: no stock rows parsed');
-  return { source: 'JODI-Oil primary data: month-end closing stocks of crude oil and refinery intake, thousand barrels', latest, columns: ['month', 'stock_kbbl', 'intake_kbbl'], countries };
+  return { source: 'JODI-Oil primary data: month-end closing stocks of crude oil and refinery intake, thousand barrels', latest, sourceUpdated, columns: ['month', 'stock_kbbl', 'intake_kbbl'], countries };
 }
 
 async function loadExisting() {

@@ -1377,8 +1377,16 @@
     }
 
     var missing = state.stocks.countries.filter(function (c) { return !(c.series && c.series.length); }).map(function (c) { return c.name; });
+    var su = state.stocks.sourceUpdated;
+    var release = '';
+    if (su) {
+      // JODI publishes once a month, around the 20th; say when the file last changed and when the next one is due.
+      var d = parseDate(su), nxt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 20));
+      release = ' JODI last published on ' + fmtDate(su, true) + '; the next monthly release, covering ' + fmtMonth(isoFromMs(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1)).slice(0, 7)) +
+        ', is expected around ' + nxt.getUTCDate() + ' ' + MONTHS[nxt.getUTCMonth()] + '.';
+    }
     note.textContent = 'JODI-Oil month-end closing stocks of crude oil, as reported by each government, with refinery intake for the days-of-cover figure; latest month in the dataset ' +
-      fmtMonth(state.stocks.latest) + '. Reporting lags by two to three months and levels may or may not include strategic reserves depending on the country.' +
+      fmtMonth(state.stocks.latest) + '.' + release + ' Reporting lags by two to three months and levels may or may not include strategic reserves depending on the country.' +
       (missing.length ? ' Not reported, so not shown: ' + missing.join(', ') + '.' : '');
   }
 

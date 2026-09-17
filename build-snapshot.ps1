@@ -211,7 +211,9 @@ $stocks = $null
 try {
   $zipPath = Join-Path $env:TEMP 'jodi_primary.zip'
   $zipDir = Join-Path $env:TEMP 'jodi_primary'
-  Invoke-WebRequest -Uri 'https://www.jodidata.org/_resources/files/downloads/oil-data/world_Primary_CSV.zip' -OutFile $zipPath -UseBasicParsing -UserAgent 'hormuz-transit-watch/1.0'
+  $zipResp = Invoke-WebRequest -Uri 'https://www.jodidata.org/_resources/files/downloads/oil-data/world_Primary_CSV.zip' -OutFile $zipPath -UseBasicParsing -UserAgent 'hormuz-transit-watch/1.0' -PassThru
+  $sourceUpdated = $null
+  try { $sourceUpdated = ([DateTime]::Parse($zipResp.Headers['Last-Modified'], [Globalization.CultureInfo]::InvariantCulture)).ToUniversalTime().ToString('yyyy-MM-dd') } catch {}
   if (Test-Path $zipDir) { Remove-Item -Recurse -Force $zipDir }
   Expand-Archive -Path $zipPath -DestinationPath $zipDir -Force
   $csvFile = Get-ChildItem $zipDir -Filter '*.csv' | Select-Object -First 1
@@ -247,6 +249,7 @@ try {
   $stocks = [ordered]@{
     source = 'JODI-Oil primary data: month-end closing stocks of crude oil and refinery intake, thousand barrels'
     latest = $latest
+    sourceUpdated = $sourceUpdated
     columns = @('month','stock_kbbl','intake_kbbl')
     countries = $countries
   }
