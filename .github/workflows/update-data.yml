@@ -2,18 +2,25 @@ name: Update data
 
 on:
   schedule:
-    # Twice a day, 03:17 and 15:17 UTC (PortWatch publishes roughly once a day).
-    - cron: '17 3 * * *'
-    - cron: '17 15 * * *'
+    # More frequent checks for news/prices; PortWatch can publish less often.
+    - cron: '17 */3 * * *'
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - make-social-cards.py
-      - scripts/build-data.mjs
+      - 'scripts/**'
+      - app.js
+      - data-status.js
+      - index.html
+      - styles.css
+      - methodology.html
+      - data/events.js
       - .github/workflows/update-data.yml
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: update-data
@@ -22,6 +29,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -29,14 +37,22 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Check refresh logic
+        run: node --test scripts/*.test.mjs
+
       - name: Fetch PortWatch and news
         run: node scripts/build-data.mjs
 
       # The cards bake today's numbers into the image, so redraw them after every refresh and bump the
       # ?v= on the og:image tags so link previews fetch the new picture instead of a cached one.
       - name: Redraw the social cards
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python3 make-social-cards.py
+
+      # A card-rendering failure must not prevent fresh data from being published.
+      - name: Version data assets
         run: |
-          python3 make-social-cards.py
           stamp=$(date -u +'%Y%m%d%H%M')
           # Also stamp the data files: browsers and the CDN may keep them for hours, and a stale
           # snapshot can lack keys that a newer app.js expects.
@@ -51,5 +67,15 @@ jobs:
             echo "No changes"
           else
             git commit -m "data: update $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase origin main
             git push
           fi
+
+      # Bot commits do not reliably trigger a branch-based Pages build by themselves.
+      - name: Publish the refreshed site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent
+
+      - name: Verify the public snapshot
+        run: node scripts/verify-deployment.mjs

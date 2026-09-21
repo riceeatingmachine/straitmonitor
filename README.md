@@ -5,16 +5,17 @@ A static site that tracks daily commercial vessel transits through the Strait of
 
 ## How it stays current
 
-The page itself never calls an outside API. It reads `data/snapshot.js`, which a scheduled job rebuilds twice a
-day (03:17 and 15:17 UTC) from the live sources and commits back to the repository. Because the data is a plain
-file, any number of visitors costs zero API calls and there are no rate limits to hit. An open tab checks for a
-newer `data/snapshot.json` once an hour.
+The page itself never calls an outside API. It reads `data/snapshot.js`, which a scheduled job rebuilds
+every 3 hours (at minute 17 UTC) from the live sources and commits back to the repository. Because the data is a plain
+file, visitors do not consume provider API calls. Every page load checks `data/snapshot.json` immediately,
+then every 15 minutes and on returning to an old tab. Refresh buttons check for a newer published snapshot,
+with visible feedback for success, no change and network failure.
 
 ```
-[GitHub Actions cron]  -->  scripts/build-data.mjs  -->  data/snapshot.js + snapshot.json  -->  commit  -->  GitHub Pages serves it
+[GitHub Actions cron] --> build-data.mjs --> snapshot files --> commit --> request Pages build --> verify public snapshot
 ```
 
-If you would rather have every browser fetch live data itself, set `DATA_MODE = 'live'` at the top of `app.js`.
+Keep `DATA_MODE = 'cached'`: the server fetches the providers so visitors are not dependent on third-party CORS or rate limits.
 
 ## Deploy on GitHub Pages at straitmonitor.com (free)
 
@@ -35,9 +36,10 @@ If you would rather have every browser fetch live data itself, set `DATA_MODE = 
 
    Remove any parking A or CNAME records the registrar added. DNS changes can take up to an hour to propagate.
 5. Go to the **Actions** tab, open **Update data**, and click **Run workflow** once to confirm it works.
-   From then on it runs by itself twice a day.
+   From then on it runs by itself every 3 hours.
 
-The workflow already declares `permissions: contents: write`, which is what it needs to commit the refreshed data.
+The workflow declares `contents: write` to save snapshots and `pages: write` to explicitly request a Pages build.
+Bot commits alone do not reliably trigger a branch-based Pages build. The workflow verifies the public JSON after requesting publication and fails if it remains behind.
 The `CNAME` file in the repository root keeps the custom domain attached across deployments; do not delete it.
 
 Any other static host works too (Netlify, Cloudflare Pages, plain web hosting). Upload `index.html`, `styles.css`,
@@ -49,13 +51,13 @@ or run `build-snapshot.ps1` yourself now and then and upload the two files it wr
 Double-click `index.html`, or serve the folder over HTTP:
 
 ```
-powershell -ExecutionPolicy Bypass -File serve.ps1
+node scripts/serve.mjs
 ```
 
-then open http://localhost:8765/. To refresh the data by hand on Windows (no Node required):
+then open http://127.0.0.1:8765/. To refresh the data by hand (Node 24):
 
 ```
-powershell -ExecutionPolicy Bypass -File build-snapshot.ps1
+node scripts/build-data.mjs
 ```
 
 ## Editing the timeline
@@ -79,14 +81,23 @@ odds. The workflow re-runs the script after every data refresh and stamps the da
 figures and link previews fetch the fresh image. The `og:image`, `og:url` and canonical tags point at
 `https://straitmonitor.com/`; change them if the site ever moves.
 
-## When a refresh fails
+## Data freshness and failed refreshes
+
+`fetchedAt` is the snapshot build time, not an observation date. `sources` stores each section's
+`checkedAt`, `lastSuccessAt`, `dataThrough`, status and error. Failed, empty, truncated or regressing feeds retain
+their saved data without getting a new success timestamp. Unknown historical fetch times remain unknown.
+The page flags delayed observations separately from failed retrievals. Daily shipping data is flagged after
+seven days; Brent allows weekends, news uses a two-day threshold and monthly stocks use a longer reporting window.
+The chokepoint comparison takes its window from the latest observation, so source delays cannot empty it.
+
+Run regression checks with `node --test scripts/*.test.mjs`.
 
 Every PortWatch query is retried up to four times with a growing pause, because the ArcGIS service behind it has
 short outages. Each section of the snapshot falls back to the previously saved data if its source is still
 unreachable, including the Hormuz series itself, in which case the Actions run shows a warning annotation instead
-of failing. A run only fails outright if there is no previous data to keep. If you get a "run failed" email from
-GitHub, open the run: a failure in "Fetch PortWatch and news" means a source was down; the next scheduled run
-(twice a day) will pick up where it left off, and the site keeps serving the last good snapshot in the meantime.
+of failing. The data build fails if there is no usable Hormuz history. Tests, commits and publication checks can
+also fail a run. If you get a "run failed" email from GitHub, inspect the failed step; the next scheduled run
+(every 3 hours) will pick up where it left off, and the site keeps serving the last good snapshot in the meantime.
 
 ## Analytics
 
@@ -121,14 +132,18 @@ third-party script on the page; remove that block to run without analytics.
 - `styles.css` – theme (light and dark), layout, chart styling
 - `app.js` – rendering, baseline maths, chart, timeline, cached/live data modes
 
-When you change `styles.css` or `app.js`, bump the `?v=` number on their two references in `index.html` so browsers and
-the Cloudflare cache fetch the new files instead of serving a copy cached for up to four hours. The workflow does the
+When you change `styles.css`, `data-status.js` or `app.js`, bump their `?v=` references in `index.html` so browsers
+fetch the new files. Cloudflare's “Strait Monitor data freshness” rule bypasses edge caching for `/`, `/index.html`,
+`/data/snapshot.js` and `/data/snapshot.json` on the apex and www host, with a 60-second browser TTL. The workflow does the
 same for `data/snapshot.js`, `data/events.js` and `og-image.png` on every refresh, stamping the run time onto them.
 - `data/snapshot.js`, `data/snapshot.json` – the generated data (committed; rebuilt by the workflow)
 - `data/events.js` – the hand-maintained timeline
 - `og-image.png`, `social/`, `make-social-cards.py` – social cards and the script that draws them
 - `favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `site.webmanifest`, `make-favicons.py` – the site icon (the strait as a chokepoint) and the script that renders the raster sizes from the SVG
 - `scripts/build-data.mjs` – data builder used by the workflow (Node 18+, no dependencies)
-- `.github/workflows/update-data.yml` – the twice-daily schedule
-- `build-snapshot.ps1` – Windows equivalent of the builder
+- `.github/workflows/update-data.yml` – data checks every 3 hours, explicit publication and public verification
+- `build-snapshot.ps1` – Windows launcher for the same Node builder
+- `scripts/serve.mjs` – local Node preview server
+- `scripts/data-health.mjs`, `data-status.js` – retrieval health and browser freshness checks
+- `scripts/verify-deployment.mjs` – verifies that the refreshed JSON reached the public site
 - `serve.ps1` – optional local static server

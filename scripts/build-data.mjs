@@ -1,5 +1,5 @@
 // Builds data/snapshot.json and data/snapshot.js from the live sources.
-// Runs on Node 18+ with no dependencies. Used by the GitHub Actions workflow twice a day;
+// Runs on Node 18+ with no dependencies. Used by the GitHub Actions workflow every 3 hours;
 // can also be run by hand:  node scripts/build-data.mjs
 //
 // Each section falls back to the previously saved data if its source is unreachable,
@@ -9,6 +9,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 import path from 'node:path';
+import { latestDate, groupDates, collectPages, refreshSection } from './data-health.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = path.join(root, 'data');
@@ -33,12 +34,12 @@ const CHOKE_COLUMNS = ['date', 'portid', 'portname', 'n_total', 'n_tanker', 'cap
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // The ArcGIS service behind PortWatch has short outages; retry each query a few times before giving up.
-async function query(params, base = BASE, attempts = 4) {
+async function queryPage(params, base = BASE, attempts = 4) {
   let lastErr;
   for (let i = 1; i <= attempts; i++) {
     // ArcGIS Online caches query responses at its edge and can serve a days-old answer for an identical URL;
     // a changing parameter plus no-cache headers make every run fetch fresh data.
-    const url = base + '?' + new URLSearchParams({ ...params, f: 'json', _ts: String(Date.now()) });
+    const url = base + '?' + new URLSearchParams({ returnGeometry: 'false', ...params, f: 'json', _ts: String(Date.now()) });
     try {
       const res = await fetch(url, {
         headers: { 'User-Agent': 'hormuz-transit-watch/1.0', 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
@@ -49,7 +50,7 @@ async function query(params, base = BASE, attempts = 4) {
       const json = await res.json();
       if (json.error) throw new Error(`PortWatch error: ${JSON.stringify(json.error)}`);
       if (!Array.isArray(json.features)) throw new Error('PortWatch: no features');
-      return json.features.map((f) => f.attributes);
+      return json;
     } catch (err) {
       lastErr = err;
       if (i < attempts) {
@@ -60,6 +61,10 @@ async function query(params, base = BASE, attempts = 4) {
     }
   }
   throw lastErr;
+}
+
+function query(params, base = BASE) {
+  return collectPages(page => queryPage(page, base), params);
 }
 
 function isoDate(v) {
@@ -81,8 +86,14 @@ async function fetchHormuz() {
 }
 
 async function fetchChokepointRecent() {
+  // Anchor the comparison to the latest observation, so delayed releases do not
+  // shrink the window to a few days or eventually erase the comparison entirely.
+  const latest = await queryPage({ where: '1=1', outFields: 'date', orderByFields: 'date DESC', resultRecordCount: '1' });
+  const date = isoDate(latest.features[0]?.attributes.date);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('No latest chokepoint date');
+  const since = new Date(Date.parse(date) - 13 * 86400000).toISOString().slice(0, 10);
   const rows = await query({
-    where: 'date >= CURRENT_DATE - 14',
+    where: `date >= DATE '${since}'`,
     outFields: CHOKE_COLUMNS.join(','),
     orderByFields: 'date ASC',
     resultRecordCount: '2000'
@@ -274,7 +285,7 @@ async function fetchPolymarket() {
     try {
       const full = await pmGet('/events?slug=' + encodeURIComponent(slug));
       const e = Array.isArray(full) ? full[0] : full;
-      if (e) found.set(slug, e);
+      if (e && !e.closed && !e.archived) found.set(slug, e);
     } catch (err) { console.warn(`Polymarket: could not load ${slug} (${err.message})`); }
   }
 
@@ -410,53 +421,39 @@ async function loadExisting() {
   try { return JSON.parse(await readFile(jsonPath, 'utf8')); } catch { return null; }
 }
 
-async function section(name, fn, fallback) {
-  try {
-    const value = await fn();
-    console.log(`${name}: ok (${Array.isArray(value) ? value.length + ' items' : 'object'})`);
-    return value;
-  } catch (err) {
-    if (fallback !== undefined) {
-      console.warn(`${name}: FAILED (${err.message}); keeping previous data`);
-      return fallback;
-    }
-    throw err;
-  }
-}
-
 const previous = await loadExisting();
-
-// The Hormuz series is the one thing the page cannot do without. If PortWatch is down even after retries,
-// keep the previous series so the rest of the refresh (news, Brent, markets, stocks) still lands, and raise a
-// visible warning in the Actions run rather than failing it. With no previous data at all, fail.
-let rows;
-try {
-  rows = await fetchHormuz();
-} catch (err) {
-  if (!previous?.rows?.length) throw err;
-  rows = previous.rows;
-  console.log(`::warning::Hormuz series: PortWatch unavailable (${err.message}); kept the previous ${rows.length} rows ending ${rows[rows.length - 1][0]}`);
-}
-console.log(`Hormuz series: ${rows.length} rows, ${rows[0][0]} to ${rows[rows.length - 1][0]}`);
-
+const sources = {};
+const daily = (rows) => ({ dataThrough: latestDate(rows), expectedLagDays: 7 });
+const grouped = (rows) => ({ dataThrough: latestDate(rows, 1), groupDates: groupDates(rows, 0, 1), expectedLagDays: 7 });
+const headlines = (items) => ({ dataThrough: items.map(i => i.pubDate).filter(Boolean).sort().at(-1) || null, expectedLagDays: 2 });
+const tasks = [
+  ['rows', 'Hormuz traffic', fetchHormuz, daily],
+  ['chokepointRecent', 'Chokepoint comparison', fetchChokepointRecent, rows => ({ ...daily(rows), groupDates: groupDates(rows, 1, 0) })],
+  ['chokepointBaselines', 'Chokepoint 2025 baselines', fetchChokepointBaselines],
+  ['countryRows', 'Country trade', fetchCountryRows, grouped],
+  ['countryBaselines', 'Country 2025 baselines', fetchCountryBaselines],
+  ['portRows', 'Port activity', fetchPortRows, grouped],
+  ['portBaselines', 'Port 2025 baselines', fetchPortBaselines],
+  ['brent', 'Brent crude', fetchBrent, value => ({ dataThrough: latestDate(value.series), expectedLagDays: 5 })],
+  ['polymarket', 'Prediction markets', fetchPolymarket, value => ({ dataThrough: value.fetchedAt, expectedLagDays: 1 })],
+  ['news', 'Hormuz news', fetchNews, headlines],
+  ['warNews', 'War news', fetchWarNews, headlines],
+  ['stocks', 'Oil stockpiles', fetchStocks, value => ({ dataThrough: value.latest, expectedLagDays: 125 })]
+];
+// Fetch independent sources concurrently; one slow provider cannot prevent the
+// others being attempted. Bounded retries/timeouts remain on each request.
+const values = await Promise.all(tasks.map(async ([key, label, fetcher, describe]) => [key,
+  await refreshSection({ key, label, fetcher, describe, previous, sources })
+]));
 const snapshot = {
-  fetchedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+  schemaVersion: 2,
+  fetchedAt: new Date().toISOString(),
   columns: COLUMNS,
-  rows,
   chokepointColumns: CHOKE_COLUMNS,
-  chokepointRecent: await section('Chokepoint recent', fetchChokepointRecent, previous?.chokepointRecent),
-  chokepointBaselines: await section('Chokepoint baselines', fetchChokepointBaselines, previous?.chokepointBaselines),
   countryColumns: COUNTRY_COLUMNS,
-  countryRows: await section('Country trade rows', fetchCountryRows, previous?.countryRows),
-  countryBaselines: await section('Country baselines', fetchCountryBaselines, previous?.countryBaselines),
   portColumns: PORT_COLUMNS,
-  portRows: await section('Port rows', fetchPortRows, previous?.portRows),
-  portBaselines: await section('Port baselines', fetchPortBaselines, previous?.portBaselines),
-  brent: await section('Brent', fetchBrent, previous?.brent),
-  polymarket: await section('Polymarket', fetchPolymarket, previous?.polymarket ?? null),
-  news: await section('News', fetchNews, previous?.news),
-  warNews: await section('War news', fetchWarNews, previous?.warNews ?? []),
-  stocks: await section('Oil stocks', fetchStocks, previous?.stocks ?? null)
+  ...Object.fromEntries(values),
+  sources
 };
 
 await mkdir(dataDir, { recursive: true });

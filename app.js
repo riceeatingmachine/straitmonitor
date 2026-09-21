@@ -1,7 +1,7 @@
 /* Hormuz Transit Watch — application script
  *
  * Data: IMF PortWatch (chokepoint transits, country trade estimates, port activity), Brent via Yahoo/FRED,
- *       Google News RSS. All of it arrives through data/snapshot.js, rebuilt twice a day by the workflow.
+ *       Google News RSS. All of it arrives through data/snapshot.js, rebuilt every 3 hours by the workflow.
  * Timeline: data/events.js (window.HORMUZ_EVENTS).
  */
 (function () {
@@ -10,11 +10,11 @@
   // ---------- Config ----------
 
   // 'cached': the page reads only data/snapshot.js, which a scheduled job (see .github/workflows) rebuilds
-  //           twice a day. Visitors' browsers never call an outside API.
+  //           every 3 hours. Visitors' browsers never call an outside API.
   // 'live':   every visitor queries PortWatch and Google News directly (Brent and ports stay from the snapshot).
   var DATA_MODE = 'cached';
   var SNAPSHOT_JSON = 'data/snapshot.json';
-  var STALE_AFTER_MS = 36 * 60 * 60 * 1000;
+  var STALE_AFTER_MS = 12 * 60 * 60 * 1000;
 
   var BASE = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query';
   var TRADE_BASE = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Trade_Data_REG/FeatureServer/0/query';
@@ -255,10 +255,12 @@
   }
 
   function fetchJson(url) {
-    return fetch(url, { cache: 'no-store' }).then(function (r) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 20000);
+    return fetch(url, { cache: 'no-store', signal: controller.signal }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
-    });
+    }).finally(function () { clearTimeout(timer); });
   }
 
   function byDate(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }
@@ -325,7 +327,7 @@
 
   function loadSnapshot() {
     var snap = window.HORMUZ_SNAPSHOT;
-    if (!snap || !snap.rows) return false;
+    if (!window.HormuzDataStatus.validSnapshot(snap)) return false;
     state.rows = unpack(snap.columns, snap.rows).map(rowFromAttrs).sort(byDate);
     state.baseline = computeBaseline(state.rows);
     if (snap.chokepointRecent && snap.chokepointColumns) {
@@ -469,12 +471,37 @@
     var box = $('stale-notice');
     var snap = window.HORMUZ_SNAPSHOT;
     if (DATA_MODE !== 'cached' || !snap || !snap.fetchedAt) { box.hidden = true; return; }
+    var messages = [];
     var age = Date.now() - Date.parse(snap.fetchedAt);
-    if (isNaN(age) || age < STALE_AFTER_MS) { box.hidden = true; return; }
-    var hours = Math.round(age / 3600000);
-    box.textContent = 'The data on this page was last refreshed ' + fmtStamp(snap.fetchedAt) + ', about ' + hours +
-      ' hours ago. The scheduled update appears to have stopped, so figures may be out of date.';
-    box.hidden = false;
+    if (age > STALE_AFTER_MS) messages.push('The last published check was ' + fmtStamp(snap.fetchedAt) + '. A scheduled update is overdue.');
+    var sources = snap.sources || {};
+    var delayed = [], failed = [];
+    var list = $('source-status-list');
+    list.replaceChildren();
+    ['rows', 'chokepointRecent', 'countryRows', 'portRows', 'brent', 'news', 'warNews', 'polymarket', 'stocks', 'chokepointBaselines', 'countryBaselines', 'portBaselines'].filter(function (key) { return sources[key]; }).forEach(function (key) {
+      var source = sources[key];
+      var status = window.HormuzDataStatus.sourceState(source, Date.now());
+      if (status === 'Source delayed') delayed.push(source.label);
+      if (source.status !== 'ok') failed.push(source.label);
+      if (/Baselines$/.test(key)) return;
+      var dates = Object.values(source.groupDates || {}).sort();
+      var through = source.dataThrough ? (source.dataThrough.length === 7 ? fmtMonth(source.dataThrough) : source.dataThrough.length === 10 ? fmtDate(source.dataThrough, true) : fmtStamp(source.dataThrough)) : 'Not available';
+      if (dates.length && dates[0] !== dates[dates.length - 1]) through = fmtDate(dates[0], true) + ' to ' + fmtDate(dates[dates.length - 1], true);
+      list.appendChild(el('tr', null, [
+        el('th', { scope: 'row', text: source.label }),
+        el('td', { text: through }),
+        el('td', { text: status }),
+        el('td', { text: source.lastSuccessAt ? fmtStamp(source.lastSuccessAt) : 'Not recorded' })
+      ]));
+    });
+    if (delayed.length) messages.push('Source data is delayed: ' + delayed.join(', ') + '. Dates below show the latest published observations.');
+    if (failed.length) messages.push('Some feeds could not refresh: ' + failed.join(', ') + '. Last available figures are retained.');
+    if (!Object.keys(sources).length && state.rows.length && daysBetween(state.rows[state.rows.length - 1].date, todayISO()) > 7) {
+      messages.push('Traffic observations are more than a week old. The site check time is separate from the observation date.');
+    }
+    $('source-status').hidden = !Object.keys(sources).length;
+    box.textContent = messages.join(' ');
+    box.hidden = !messages.length;
   }
 
   function renderHeader() {
@@ -502,8 +529,10 @@
       live.setAttribute('data-state', 'live');
       $('live-text').textContent = 'Live · checked ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else if (state.source === 'cached') {
-      live.setAttribute('data-state', 'live');
-      $('live-text').textContent = 'Data refreshed ' + fmtStamp(snap && snap.fetchedAt) + ' · updates twice daily';
+      var healthy = snap && Date.now() - Date.parse(snap.fetchedAt) < STALE_AFTER_MS && lag <= 7 &&
+        Object.values(snap.sources || {}).every(function (source) { return window.HormuzDataStatus.sourceState(source, Date.now()) === 'Checked'; });
+      live.setAttribute('data-state', healthy ? 'live' : 'saved');
+      $('live-text').textContent = 'Site checked ' + fmtStamp(snap && snap.fetchedAt) + ' · scheduled every 3 hours';
     } else {
       live.setAttribute('data-state', 'saved');
       $('live-text').textContent = 'Saved data from ' + fmtStamp(snap && snap.fetchedAt);
@@ -1380,10 +1409,7 @@
     var su = state.stocks.sourceUpdated;
     var release = '';
     if (su) {
-      // JODI publishes once a month, around the 20th; say when the file last changed and when the next one is due.
-      var d = parseDate(su), nxt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 20));
-      release = ' JODI last published on ' + fmtDate(su, true) + '; the next monthly release, covering ' + fmtMonth(isoFromMs(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1)).slice(0, 7)) +
-        ', is expected around ' + nxt.getUTCDate() + ' ' + MONTHS[nxt.getUTCMonth()] + '.';
+      release = ' Source file last modified ' + fmtDate(su, true) + '.';
     }
     note.textContent = 'JODI-Oil month-end closing stocks of crude oil, as reported by each government, with refinery intake for the days-of-cover figure; latest month in the dataset ' +
       fmtMonth(state.stocks.latest) + '.' + release + ' Reporting lags by two to three months and levels may or may not include strategic reserves depending on the country.' +
@@ -1671,7 +1697,15 @@
   function renderNewsFromSnapshot() {
     var snap = window.HORMUZ_SNAPSHOT;
     $('news-notice').hidden = true;
-    renderNews((snap && snap.news) || [], 'Updated ' + fmtStamp(snap && snap.fetchedAt));
+    renderNews((snap && snap.news) || [], sourceStamp('news'));
+  }
+
+  function sourceStamp(key) {
+    var snap = window.HORMUZ_SNAPSHOT;
+    var source = snap && snap.sources && snap.sources[key];
+    if (!source) return 'Saved in snapshot ' + fmtStamp(snap && snap.fetchedAt);
+    return (source.lastSuccessAt ? 'Fetched ' + fmtStamp(source.lastSuccessAt) : 'Last successful fetch not recorded') +
+      (source.status === 'ok' ? '' : ' · refresh failed');
   }
 
   // ---------- War tracker ----------
@@ -1768,7 +1802,7 @@
     var snap = window.HORMUZ_SNAPSHOT;
     $('war-notice').hidden = true;
     setWarItems(warSourceItems());
-    $('war-updated').textContent = 'Updated ' + fmtStamp(snap && snap.fetchedAt);
+    $('war-updated').textContent = sourceStamp('warNews');
   }
 
   function loadWar() {
@@ -1849,23 +1883,42 @@
   setInterval(renderStale, 10 * 60 * 1000);
 
   // Cached mode: pick up a newer snapshot.json (published by the scheduled job) without a reload.
+  var snapshotRequest = null;
   function refreshSnapshot() {
     if (!/^https?:/.test(location.protocol)) return Promise.resolve();
-    var btn = $('news-refresh');
-    btn.disabled = true;
-    return fetchJson(SNAPSHOT_JSON + '?v=' + Date.now())
+    if (snapshotRequest) return snapshotRequest;
+    var buttons = [$('data-refresh'), $('news-refresh'), $('war-refresh')];
+    buttons.forEach(function (btn) { btn.disabled = true; });
+    function feedback(message) {
+      $('refresh-status').textContent = message;
+      $('news-updated').textContent = sourceStamp('news') + ' · ' + message;
+      $('war-updated').textContent = sourceStamp('warNews') + ' · ' + message;
+    }
+    feedback('Checking for published updates…');
+    snapshotRequest = fetchJson(SNAPSHOT_JSON + '?v=' + Date.now())
       .then(function (json) {
+        if (!window.HormuzDataStatus.validSnapshot(json)) throw new Error('The published data file is incomplete');
         var current = window.HORMUZ_SNAPSHOT;
-        if (!json || !json.rows || (current && json.fetchedAt === current.fetchedAt)) return;
+        if (current && Date.parse(json.fetchedAt) < Date.parse(current.fetchedAt)) throw new Error('The server returned an older snapshot');
+        if (current && json.fetchedAt === current.fetchedAt) {
+          feedback('Checked · you have the latest published snapshot.');
+          renderStale();
+          return;
+        }
         window.HORMUZ_SNAPSHOT = json;
         loadSnapshot();
         state.source = 'cached';
         renderAll();
         renderNewsFromSnapshot();
         renderWarFromSnapshot();
+        feedback('Loaded the latest published snapshot.');
       })
-      .catch(function () { /* keep what is on screen */ })
-      .then(function () { btn.disabled = false; });
+      .catch(function () { feedback('Could not check for updates. Saved figures remain; please retry.'); })
+      .finally(function () {
+        buttons.forEach(function (btn) { btn.disabled = false; });
+        snapshotRequest = null;
+      });
+    return snapshotRequest;
   }
 
   var haveSnapshot = loadSnapshot();
@@ -1882,12 +1935,15 @@
     }
     $('news-refresh').addEventListener('click', refreshSnapshot);
     $('war-refresh').addEventListener('click', refreshSnapshot);
+    $('data-refresh').addEventListener('click', refreshSnapshot);
 
-    var HOURLY = 60 * 60 * 1000;
+    var CHECK_EVERY = 15 * 60 * 1000;
     var lastCheck = Date.now();
-    setInterval(function () { lastCheck = Date.now(); refreshSnapshot(); }, HOURLY);
+    // Recover from a cached or missing snapshot.js immediately on every page load.
+    refreshSnapshot();
+    setInterval(function () { lastCheck = Date.now(); refreshSnapshot(); }, CHECK_EVERY);
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && Date.now() - lastCheck > HOURLY) {
+      if (document.visibilityState === 'visible' && Date.now() - lastCheck > CHECK_EVERY) {
         lastCheck = Date.now();
         refreshSnapshot();
       }

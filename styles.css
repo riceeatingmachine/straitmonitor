@@ -1307,3 +1307,13 @@ td .delta { margin-left: 6px; }
 @media (prefers-reduced-motion: no-preference) {
   .meter > span { transition: width 400ms ease; }
 }
+/* Data retrieval status remains separate from observation dates. */
+.data-refresh-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 16px 0; font-size: 12px; }
+.source-status { margin-bottom: 20px; border: 1px solid var(--line, #7b879344); padding: 12px; font-size: 12px; }
+.source-status summary { cursor: pointer; font-weight: 600; }
+.source-status p { line-height: 1.6; }
+.source-status-scroll { overflow-x: auto; }
+.source-status table { width: 100%; border-collapse: collapse; }
+.source-status th, .source-status td { padding: 9px; text-align: left; border-bottom: 1px solid var(--line, #7b879344); }
+.source-status td { overflow-wrap: anywhere; }
+button:disabled { cursor: wait; opacity: 0.6; }

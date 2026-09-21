@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 
@@ -60,7 +60,7 @@
     </nav>
 
     <h2 id="principles">Principles</h2>
-    <p>Every figure on the tracker is computed from a <b>public, documented dataset</b> that anyone can download and check. Nothing is estimated by hand, and no number is entered manually except the timeline of events. The page is a static file; a scheduled job rebuilds the data twice a day and commits it to the <a href="https://github.com/riceeatingmachine/straitmonitor" target="_blank" rel="noopener">public repository</a>, so the exact data behind any day's page is in the git history.</p>
+    <p>Every figure on the tracker is computed from a <b>public, documented dataset</b> that anyone can download and check. Nothing is estimated by hand, and no number is entered manually except the timeline of events. The page is a static file; a scheduled job rebuilds the data every 3 hours and commits it to the <a href="https://github.com/riceeatingmachine/straitmonitor" target="_blank" rel="noopener">public repository</a>, so the exact data behind any day's page is in the git history.</p>
 
     <h2 id="traffic">Traffic counts</h2>
     <p>Daily transit counts come from the IMF's <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">PortWatch</a> "Daily Chokepoints" dataset (port id <code>chokepoint6</code>), which estimates the number of commercial vessels crossing the strait each day from satellite AIS positions, broken down into tankers, container ships, dry bulk, general cargo and ro-ro, plus the combined deadweight tonnage. Counts cover <b>both directions</b>. PortWatch publishes with a lag of roughly three to five days, so the latest day shown is usually a few days behind today.</p>
@@ -87,7 +87,7 @@
     <p>Two families of Hormuz trackers exist, and they answer different questions.</p>
     <table>
       <tr><th>Approach</th><th>What it measures</th><th>Strengths</th><th>Weaknesses</th></tr>
-      <tr><td><b>Transponder counts</b> (this site)</td><td>Vessels whose AIS signal PortWatch places in the strait each day</td><td>Public, official, consistent since 2019, covers every ship type, cheap to refresh twice a day</td><td>Misses dark ships; a count says nothing about how full a tanker is; lags three to five days</td></tr>
+      <tr><td><b>Transponder counts</b> (this site)</td><td>Vessels whose AIS signal PortWatch places in the strait each day</td><td>Public, official, consistent since 2019, covers every ship type, cheap to refresh every 3 hours</td><td>Misses dark ships; a count says nothing about how full a tanker is; lags three to five days</td></tr>
       <tr><td><b>Flow estimates</b> (satellite and downstream AIS trackers, for example <a href="https://hormuzstraittracker.com/" target="_blank" rel="noopener">Hormuz Strait Tracker</a>)</td><td>Barrels per day, inferred from loading activity seen in satellite imagery and from laden tankers spotted downstream once they switch AIS back on</td><td>Captures dark ships and cargo volume; closer to what markets receive</td><td>Proprietary analysis with judgement calls; scaled to an assumed pre-war flow; recent data often paywalled</td></tr>
     </table>
     <p>Because a transponder count will always undercount during a crisis in which ships deliberately hide, this site's headline share of transits should be read as a <b>lower bound on activity at the strait</b>, and the full-picture panel as the closer estimate of oil reaching markets. When the two families of tracker are compared on the same basis, total Gulf liquids reaching markets as a share of pre-war, they have tended to land in the same range, which is a useful cross-check on both.</p>
@@ -114,7 +114,7 @@
     </ul>
 
     <h2 id="refresh">Refresh cycle</h2>
-    <p>A scheduled job runs at 03:17 and 15:17 UTC. It fetches every source, writes the data file, redraws the social preview cards from the fresh numbers and commits the result. The time of the last refresh is shown in the page header. An open tab checks for newer data once an hour. The code, the builder and every past data file are in the <a href="https://github.com/riceeatingmachine/straitmonitor" target="_blank" rel="noopener">repository</a>.</p>
+    <p>A scheduled job runs at 17 minutes past every third hour (UTC); GitHub may delay scheduled runs. It fetches the sources, saves the data, requests a GitHub Pages build and checks that the public site serves the new snapshot. Social-card failures do not block publication. Each feed records its own last successful fetch and latest observation date. A successful check does not mean the provider has published newer observations; delayed releases and failed feeds are flagged on the page. An open tab checks for newer data immediately on loading and every 15 minutes. Refresh buttons load the latest published snapshot. The code, the builder and every past data file are in the <a href="https://github.com/riceeatingmachine/straitmonitor" target="_blank" rel="noopener">repository</a>.</p>
   </section>
 </main>
 
