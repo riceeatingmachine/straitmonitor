@@ -5,11 +5,11 @@ import status from '../data-status.js';
 
 test('fresh retrieval cannot hide delayed observations', () => {
   const source = { status: 'ok', dataThrough: '2026-09-13', lastSuccessAt: '2026-09-22T00:00:00Z', expectedLagDays: 7 };
-  assert.equal(status.sourceState(source, Date.parse('2026-09-22T01:00:00Z')), 'Source delayed');
+  assert.equal(status.sourceState(source, Date.parse('2026-09-22T01:00:00Z')), 'Publicly available data is delayed');
 });
 test('group date differences do not hide a delayed country', () => {
   const source = { status: 'ok', dataThrough: '2026-09-22', groupDates: { QAT: '2026-09-11', OMN: '2026-09-22' }, lastSuccessAt: '2026-09-22T00:00:00Z', expectedLagDays: 7 };
-  assert.equal(status.sourceState(source, Date.parse('2026-09-22T01:00:00Z')), 'Source delayed');
+  assert.equal(status.sourceState(source, Date.parse('2026-09-22T01:00:00Z')), 'Publicly available data is delayed');
 });
 test('monthly stock data uses its own publication lag', () => {
   assert.equal(status.sourceState({ status: 'ok', dataThrough: '2026-06', lastSuccessAt: '2026-09-22T00:00:00Z', expectedLagDays: 125 }, Date.parse('2026-09-22T01:00:00Z')), 'Checked');

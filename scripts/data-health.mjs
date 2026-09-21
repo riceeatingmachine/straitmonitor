@@ -31,21 +31,30 @@ export async function refreshSection({ key, label, fetcher, previous, sources, d
   const prior = previous?.sources?.[key];
   try {
     const value = await fetcher();
-    if (value == null || (Array.isArray(value) && !value.length)) throw new Error('Source returned no data');
+    if (value == null || (Array.isArray(value) && !value.length)) throw new PullError('empty_response');
     const info = describe(value);
     const oldInfo = previous?.[key] == null ? {} : describe(previous[key]);
-    if (oldInfo.dataThrough && info.dataThrough < oldInfo.dataThrough) throw new Error(`Source regressed from ${oldInfo.dataThrough} to ${info.dataThrough}`);
+    if (oldInfo.dataThrough && info.dataThrough < oldInfo.dataThrough) throw new PullError('data_regressed');
     for (const [group, date] of Object.entries(oldInfo.groupDates || {})) {
-      if (!info.groupDates?.[group] || info.groupDates[group] < date) throw new Error(`Source omitted or regressed ${group}`);
+      if (!info.groupDates?.[group] || info.groupDates[group] < date) throw new PullError('incomplete_response');
     }
-    sources[key] = { label, checkedAt, lastSuccessAt: now(), status: 'ok', ...info };
+    const finishedAt = now();
+    const comparable = value => key === 'polymarket' ? value?.events : value;
+    const change = previous?.[key] == null ? 'first_fetch' : JSON.stringify(comparable(value)) === JSON.stringify(comparable(previous[key])) ? 'unchanged' : 'updated';
+    sources[key] = { label, checkedAt, finishedAt, durationMs: Date.parse(finishedAt) - Date.parse(checkedAt), lastSuccessAt: finishedAt, status: 'ok', change, ...info };
     console.log(`${label}: ok${info.dataThrough ? `, data through ${info.dataThrough}` : ''}`);
     return value;
   } catch (error) {
     const fallback = previous?.[key];
-    sources[key] = { label, checkedAt, lastSuccessAt: prior?.lastSuccessAt || null, status: fallback == null ? 'unavailable' : 'error', error: error.message, ...(fallback == null ? {} : describe(fallback)) };
-    console.warn(`::warning::${label}: ${error.message}; ${fallback == null ? 'unavailable' : 'keeping previous data'}`);
-    if (key === 'rows' && !fallback?.length) throw error;
+    const finishedAt = now();
+    const errorCode = error instanceof PullError ? error.code : 'fetch_failed';
+    sources[key] = { label, checkedAt, finishedAt, durationMs: Date.parse(finishedAt) - Date.parse(checkedAt), lastSuccessAt: prior?.lastSuccessAt || null, status: fallback == null ? 'unavailable' : 'error', errorCode, change: fallback == null ? 'unknown' : 'retained', ...(fallback == null ? {} : describe(fallback)) };
+    console.warn(`::warning::${label}: ${errorCode}; ${fallback == null ? 'unavailable' : 'keeping previous data'}`);
+    if (key === 'rows' && !fallback?.length) throw new PullError(errorCode);
     return fallback ?? null;
   }
+}
+
+class PullError extends Error {
+  constructor(code) { super(code); this.code = code; }
 }

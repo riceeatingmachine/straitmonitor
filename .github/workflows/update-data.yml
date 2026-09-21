@@ -2,8 +2,8 @@ name: Update data
 
 on:
   schedule:
-    # More frequent checks for news/prices; PortWatch can publish less often.
-    - cron: '17 */3 * * *'
+    # Every 12 hours, at 03:17 and 15:17 UTC.
+    - cron: '17 3,15 * * *'
   workflow_dispatch:
   push:
     branches: [main]
@@ -12,6 +12,9 @@ on:
       - 'scripts/**'
       - app.js
       - data-status.js
+      - status.html
+      - status.js
+      - status.css
       - index.html
       - styles.css
       - methodology.html
@@ -21,6 +24,7 @@ on:
 permissions:
   contents: write
   pages: write
+  actions: read
 
 concurrency:
   group: update-data
@@ -30,7 +34,17 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      started_at: ${{ steps.begin.outputs.started_at }}
+      data_result: ${{ steps.data.outcome }}
+      cards_result: ${{ steps.cards.outcome }}
+      publication_result: ${{ steps.publish.outcome }}
+      verification_result: ${{ steps.verify.outcome }}
     steps:
+      - name: Record start time
+        id: begin
+        run: echo "started_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -41,11 +55,24 @@ jobs:
         run: node --test scripts/*.test.mjs
 
       - name: Fetch PortWatch and news
+        id: data
         run: node scripts/build-data.mjs
+
+      - name: Save public source results
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-pull-report-${{ github.run_attempt }}
+          path: .pull-report.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
 
       # The cards bake today's numbers into the image, so redraw them after every refresh and bump the
       # ?v= on the og:image tags so link previews fetch the new picture instead of a cached one.
       - name: Redraw the social cards
+        id: cards
         continue-on-error: true
         timeout-minutes: 3
         run: python3 make-social-cards.py
@@ -73,9 +100,60 @@ jobs:
 
       # Bot commits do not reliably trigger a branch-based Pages build by themselves.
       - name: Publish the refreshed site
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent
 
       - name: Verify the public snapshot
+        id: verify
         run: node scripts/verify-deployment.mjs
+
+  # A separate job records failures, skipped pulls and timeouts as well as successes.
+  # It downloads only the explicitly allowlisted report, never runner/provider logs.
+  status:
+    if: ${{ always() }}
+    needs: update
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Read public source results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: public-pull-report-${{ github.run_attempt }}
+          path: .
+
+      - name: Record pull history
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_STARTED_AT: ${{ needs.update.outputs.started_at }}
+          PULL_RESULT: ${{ needs.update.result }}
+          PULL_DATA_RESULT: ${{ needs.update.outputs.data_result }}
+          PULL_CARDS_RESULT: ${{ needs.update.outputs.cards_result }}
+          PULL_PUBLICATION_RESULT: ${{ needs.update.outputs.publication_result }}
+          PULL_VERIFICATION_RESULT: ${{ needs.update.outputs.verification_result }}
+        run: node scripts/record-pull-status.mjs
+
+      - name: Publish pull history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "hormuz-data-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/status.json data/status
+          git commit -m "status: record data pull outcome"
+          git pull --rebase origin main
+          git push
+          gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent
+
+      - name: Verify public pull history
+        run: node scripts/verify-status.mjs

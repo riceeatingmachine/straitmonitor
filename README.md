@@ -6,7 +6,7 @@ A static site that tracks daily commercial vessel transits through the Strait of
 ## How it stays current
 
 The page itself never calls an outside API. It reads `data/snapshot.js`, which a scheduled job rebuilds
-every 3 hours (at minute 17 UTC) from the live sources and commits back to the repository. Because the data is a plain
+every 12 hours (03:17 and 15:17 UTC) from the live sources and commits back to the repository. Because the data is a plain
 file, visitors do not consume provider API calls. Every page load checks `data/snapshot.json` immediately,
 then every 15 minutes and on returning to an old tab. Refresh buttons check for a newer published snapshot,
 with visible feedback for success, no change and network failure.
@@ -36,7 +36,7 @@ Keep `DATA_MODE = 'cached'`: the server fetches the providers so visitors are no
 
    Remove any parking A or CNAME records the registrar added. DNS changes can take up to an hour to propagate.
 5. Go to the **Actions** tab, open **Update data**, and click **Run workflow** once to confirm it works.
-   From then on it runs by itself every 3 hours.
+   From then on it runs by itself every 12 hours.
 
 The workflow declares `contents: write` to save snapshots and `pages: write` to explicitly request a Pages build.
 Bot commits alone do not reliably trigger a branch-based Pages build. The workflow verifies the public JSON after requesting publication and fails if it remains behind.
@@ -97,7 +97,7 @@ short outages. Each section of the snapshot falls back to the previously saved d
 unreachable, including the Hormuz series itself, in which case the Actions run shows a warning annotation instead
 of failing. The data build fails if there is no usable Hormuz history. Tests, commits and publication checks can
 also fail a run. If you get a "run failed" email from GitHub, inspect the failed step; the next scheduled run
-(every 3 hours) will pick up where it left off, and the site keeps serving the last good snapshot in the meantime.
+(every 12 hours) will pick up where it left off, and the site keeps serving the last good snapshot in the meantime.
 
 ## Analytics
 
@@ -134,16 +134,22 @@ third-party script on the page; remove that block to run without analytics.
 
 When you change `styles.css`, `data-status.js` or `app.js`, bump their `?v=` references in `index.html` so browsers
 fetch the new files. Cloudflare's “Strait Monitor data freshness” rule bypasses edge caching for `/`, `/index.html`,
-`/data/snapshot.js` and `/data/snapshot.json` on the apex and www host, with a 60-second browser TTL. The workflow does the
+`/data/snapshot.js`, `/data/snapshot.json`, `/status.html`, `/data/status.json` and `/data/status/` on the apex and www host, with a 60-second browser TTL. The workflow does the
 same for `data/snapshot.js`, `data/events.js` and `og-image.png` on every refresh, stamping the run time onto them.
 - `data/snapshot.js`, `data/snapshot.json` – the generated data (committed; rebuilt by the workflow)
 - `data/events.js` – the hand-maintained timeline
 - `og-image.png`, `social/`, `make-social-cards.py` – social cards and the script that draws them
 - `favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `site.webmanifest`, `make-favicons.py` – the site icon (the strait as a chokepoint) and the script that renders the raster sizes from the SVG
 - `scripts/build-data.mjs` – data builder used by the workflow (Node 18+, no dependencies)
-- `.github/workflows/update-data.yml` – data checks every 3 hours, explicit publication and public verification
+- `.github/workflows/update-data.yml` – data checks every 12 hours, explicit publication and public verification
 - `build-snapshot.ps1` – Windows launcher for the same Node builder
 - `scripts/serve.mjs` – local Node preview server
 - `scripts/data-health.mjs`, `data-status.js` – retrieval health and browser freshness checks
 - `scripts/verify-deployment.mjs` – verifies that the refreshed JSON reached the public site
 - `serve.ps1` – optional local static server
+
+## Public pull status
+
+`status.html` shows pull outcomes and per-source fetch results, data changes, dates and durations. History is retained in monthly files under `data/status/`, with a small index at `data/status.json`. Older imported pulls show their overall outcome and explicitly mark unavailable source-level details. A separate workflow job records failed pulls as well as successful ones; missed records are recovered from completed workflow history on a later run.
+
+The public schema is an explicit allowlist: fixed source names, enumerated results and error codes, timestamps, durations and opaque record identifiers. It excludes raw provider responses, errors, logs, credentials and account metadata. The temporary source report is ignored by Git. Status-page refreshes and the tracker's “Check for updates” button only read published files and do not start GitHub Actions. Scheduled pulls run at 03:17 and 15:17 UTC.

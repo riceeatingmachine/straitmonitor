@@ -35,7 +35,7 @@ test('partial country responses cannot silently replace complete saved data', as
   const sources = {};
   const result = await refreshSection({ key: 'countryRows', label: 'Trade', previous, sources, describe, fetcher: async () => [['QAT', '2026-09-13']] });
   assert.equal(result, oldRows);
-  assert.match(sources.countryRows.error, /OMN/);
+  assert.equal(sources.countryRows.errorCode, 'incomplete_response');
 });
 
 test('successful retrieval records the observation date without changing it to today', async () => {
@@ -44,6 +44,8 @@ test('successful retrieval records the observation date without changing it to t
   assert.equal(sources.countryRows.status, 'ok');
   assert.equal(sources.countryRows.dataThrough, '2026-09-12');
   assert.equal(sources.countryRows.lastSuccessAt, '2026-09-22T00:00:00Z');
+  assert.equal(sources.countryRows.change, 'unchanged');
+  assert.equal(sources.countryRows.durationMs, 0);
 });
 
 test('a failed optional source with no history stays explicitly unavailable', async () => {
@@ -54,5 +56,14 @@ test('a failed optional source with no history stays explicitly unavailable', as
 });
 
 test('traffic failure without a saved snapshot fails the build', async () => {
-  await assert.rejects(refreshSection({ key: 'rows', label: 'Traffic', sources: {}, fetcher: async () => [] }), /no data/);
+  await assert.rejects(refreshSection({ key: 'rows', label: 'Traffic', sources: {}, fetcher: async () => [] }), /empty_response/);
+});
+
+test('provider errors are replaced by fixed public error codes', async () => {
+  const sources = {};
+  const result = await refreshSection({ key: 'countryRows', label: 'Trade', previous, sources, describe, fetcher: async () => { throw new Error('PRIVATE_TEST_SENTINEL'); } });
+  assert.equal(result, oldRows);
+  assert.equal(sources.countryRows.errorCode, 'fetch_failed');
+  assert.equal(sources.countryRows.change, 'retained');
+  assert.ok(!JSON.stringify(sources).includes('PRIVATE_TEST_SENTINEL'));
 });

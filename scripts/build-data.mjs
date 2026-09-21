@@ -1,5 +1,5 @@
 // Builds data/snapshot.json and data/snapshot.js from the live sources.
-// Runs on Node 18+ with no dependencies. Used by the GitHub Actions workflow every 3 hours;
+// Runs on Node 18+ with no dependencies. Used by the GitHub Actions workflow every 12 hours;
 // can also be run by hand:  node scripts/build-data.mjs
 //
 // Each section falls back to the previously saved data if its source is unreachable,
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 import path from 'node:path';
 import { latestDate, groupDates, collectPages, refreshSection } from './data-health.mjs';
+import { sourceReport } from './public-status.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = path.join(root, 'data');
@@ -442,9 +443,19 @@ const tasks = [
 ];
 // Fetch independent sources concurrently; one slow provider cannot prevent the
 // others being attempted. Bounded retries/timeouts remain on each request.
-const values = await Promise.all(tasks.map(async ([key, label, fetcher, describe]) => [key,
+const results = await Promise.allSettled(tasks.map(async ([key, label, fetcher, describe]) => [key,
   await refreshSection({ key, label, fetcher, describe, previous, sources })
 ]));
+// Always write an allowlisted report, even when the required traffic feed fails.
+// The workflow uploads this small report to the separate history job; never logs.
+const finishedAt = new Date().toISOString();
+const publicSources = Object.fromEntries(Object.keys(sources).map(key => [key, sourceReport(key, sources[key], finishedAt)]));
+await writeFile(path.join(root, '.pull-report.json'), JSON.stringify({ sources: publicSources }) + '\n');
+if (results.some(result => result.status === 'rejected')) {
+  console.error('Required traffic data unavailable. The saved snapshot was not replaced.');
+  process.exit(1);
+}
+const values = results.map(result => result.value);
 const snapshot = {
   schemaVersion: 2,
   fetchedAt: new Date().toISOString(),

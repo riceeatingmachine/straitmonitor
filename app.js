@@ -1,7 +1,7 @@
 /* Hormuz Transit Watch — application script
  *
  * Data: IMF PortWatch (chokepoint transits, country trade estimates, port activity), Brent via Yahoo/FRED,
- *       Google News RSS. All of it arrives through data/snapshot.js, rebuilt every 3 hours by the workflow.
+ *       Google News RSS. All of it arrives through data/snapshot.js, rebuilt every 12 hours by the workflow.
  * Timeline: data/events.js (window.HORMUZ_EVENTS).
  */
 (function () {
@@ -10,11 +10,11 @@
   // ---------- Config ----------
 
   // 'cached': the page reads only data/snapshot.js, which a scheduled job (see .github/workflows) rebuilds
-  //           every 3 hours. Visitors' browsers never call an outside API.
+  //           every 12 hours. Visitors' browsers never call an outside API.
   // 'live':   every visitor queries PortWatch and Google News directly (Brent and ports stay from the snapshot).
   var DATA_MODE = 'cached';
   var SNAPSHOT_JSON = 'data/snapshot.json';
-  var STALE_AFTER_MS = 12 * 60 * 60 * 1000;
+  var STALE_AFTER_MS = 36 * 60 * 60 * 1000;
 
   var BASE = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query';
   var TRADE_BASE = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Trade_Data_REG/FeatureServer/0/query';
@@ -481,7 +481,7 @@
     ['rows', 'chokepointRecent', 'countryRows', 'portRows', 'brent', 'news', 'warNews', 'polymarket', 'stocks', 'chokepointBaselines', 'countryBaselines', 'portBaselines'].filter(function (key) { return sources[key]; }).forEach(function (key) {
       var source = sources[key];
       var status = window.HormuzDataStatus.sourceState(source, Date.now());
-      if (status === 'Source delayed') delayed.push(source.label);
+      if (status === 'Publicly available data is delayed') delayed.push(source.label);
       if (source.status !== 'ok') failed.push(source.label);
       if (/Baselines$/.test(key)) return;
       var dates = Object.values(source.groupDates || {}).sort();
@@ -494,7 +494,7 @@
         el('td', { text: source.lastSuccessAt ? fmtStamp(source.lastSuccessAt) : 'Not recorded' })
       ]));
     });
-    if (delayed.length) messages.push('Source data is delayed: ' + delayed.join(', ') + '. Dates below show the latest published observations.');
+    if (delayed.length) messages.push('Publicly available data is delayed: ' + delayed.join(', ') + '. Dates below show the latest published observations.');
     if (failed.length) messages.push('Some feeds could not refresh: ' + failed.join(', ') + '. Last available figures are retained.');
     if (!Object.keys(sources).length && state.rows.length && daysBetween(state.rows[state.rows.length - 1].date, todayISO()) > 7) {
       messages.push('Traffic observations are more than a week old. The site check time is separate from the observation date.');
@@ -532,7 +532,7 @@
       var healthy = snap && Date.now() - Date.parse(snap.fetchedAt) < STALE_AFTER_MS && lag <= 7 &&
         Object.values(snap.sources || {}).every(function (source) { return window.HormuzDataStatus.sourceState(source, Date.now()) === 'Checked'; });
       live.setAttribute('data-state', healthy ? 'live' : 'saved');
-      $('live-text').textContent = 'Site checked ' + fmtStamp(snap && snap.fetchedAt) + ' · scheduled every 3 hours';
+      $('live-text').textContent = 'Site checked ' + fmtStamp(snap && snap.fetchedAt) + ' · scheduled every 12 hours';
     } else {
       live.setAttribute('data-state', 'saved');
       $('live-text').textContent = 'Saved data from ' + fmtStamp(snap && snap.fetchedAt);

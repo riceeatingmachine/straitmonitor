@@ -15,8 +15,8 @@
     if (source.status === 'error') return 'Refresh failed · saved data';
     var dates = Object.values(source.groupDates || {});
     var through = dates.length ? dates.sort()[0] : source.dataThrough;
-    if (through && now - Date.parse(through.length === 7 ? through + '-01' : through) > (source.expectedLagDays || 7) * DAY) return 'Source delayed';
-    if (!source.lastSuccessAt || now - Date.parse(source.lastSuccessAt) > 12 * 3600000) return 'Check overdue';
+    if (through && now - Date.parse(through.length === 7 ? through + '-01' : through) > (source.expectedLagDays || 7) * DAY) return 'Publicly available data is delayed';
+    if (!source.lastSuccessAt || now - Date.parse(source.lastSuccessAt) > 36 * 3600000) return 'Check overdue';
     return 'Checked';
   }
   var api = { validSnapshot: validSnapshot, sourceState: sourceState };

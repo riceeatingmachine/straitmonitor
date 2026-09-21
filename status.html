@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pull status · Hormuz Transit Watch</title>
+  <meta name="description" content="Results of every data refresh: public source availability, data dates and refresh history for Hormuz Transit Watch.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <link rel="canonical" href="https://straitmonitor.com/status.html">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="status.css?v=1">
+  <script src="status.js?v=1" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand">
+        <div class="eyebrow">Straitmonitor.com · Data operations</div>
+        <h1>Pull status</h1>
+        <p>Every refresh, its outcome, and the public data behind it.</p>
+        <nav class="live" aria-label="Site navigation"><a href="./">← Tracker</a><span aria-hidden="true">·</span><a href="methodology.html">Methodology</a></nav>
+      </div>
+    </div>
+  </header>
+  <main class="pull-page">
+    <section class="pull-overview" aria-label="Latest refresh">
+      <div class="pull-kpi"><span class="eyebrow">Latest pull</span><strong id="latest-result">Loading…</strong><span id="latest-time">Reading published history</span></div>
+      <div class="pull-kpi"><span class="eyebrow">Recorded pulls</span><strong class="num" id="total-pulls">–</strong><span id="history-since">Full history by month</span></div>
+      <div class="pull-kpi"><span class="eyebrow">Scheduled refresh</span><strong>Every 12 hours</strong><span>03:17 &amp; 15:17 UTC · runs may be queued</span></div>
+    </section>
+    <p class="pull-notice" id="pull-notice" hidden></p>
+    <div class="pull-toolbar">
+      <label>Month <select id="history-month" aria-label="History month"></select></label>
+      <label>Result <select id="history-filter" aria-label="Filter by result"><option value="all">All results</option><option value="success">Successful</option><option value="attention">Needs attention</option></select></label>
+      <button class="btn" id="history-refresh" type="button">Refresh status</button>
+    </div>
+    <p class="pull-check" id="history-check" role="status" aria-live="polite">Loading published results…</p>
+    <section aria-labelledby="history-heading">
+      <div class="pull-section-head"><h2 id="history-heading">Refresh history</h2><span>All times UTC</span></div>
+      <p class="pull-explainer">Expand a pull to see its source results. “Unchanged” means a fetch succeeded but the published data stayed the same. Older pulls may have no source-level details.</p>
+      <div id="pull-history"></div>
+      <button class="btn pull-more" id="history-more" type="button" hidden>Show more pulls</button>
+    </section>
+    <footer class="pull-footer">
+      <p id="history-published"></p>
+      <p>Viewing this page or refreshing its status only reads published results. It never starts a pull or uses GitHub Actions minutes.</p>
+      <p>Only public timing and outcome information is shown. No credentials, private account details or raw logs are included.</p>
+    </footer>
+    <noscript><p>Enable JavaScript to view the refresh history, or <a href="data/status.json">read the public status data</a>.</p></noscript>
+  </main>
+</body>
+</html>

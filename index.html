@@ -13,7 +13,7 @@
     gtag('config', 'G-4L4W1HVJ27');
   </script>
   <title>Hormuz Transit Watch</title>
-  <meta name="description" content="Live tracker for the Strait of Hormuz closure: daily ship transits against the 2025 baseline, oil reaching world markets in barrels, each Gulf state's export shortfall, crude stockpiles by country, Brent, prediction markets, a timeline, the news and a war tracker. Updated every 3 hours.">
+  <meta name="description" content="Live tracker for the Strait of Hormuz closure: daily ship transits against the 2025 baseline, oil reaching world markets in barrels, each Gulf state's export shortfall, crude stockpiles by country, Brent, prediction markets, a timeline, the news and a war tracker. Updated every 12 hours.">
   <link rel="canonical" href="https://straitmonitor.com/">
   <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -23,14 +23,14 @@
   <meta property="og:url" content="https://straitmonitor.com/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Hormuz Transit Watch">
-  <meta property="og:description" content="Daily ship transits, oil reaching world markets in barrels, each Gulf state's export shortfall, crude stockpiles, Brent and a crisis timeline. Updated every 3 hours.">
+  <meta property="og:description" content="Daily ship transits, oil reaching world markets in barrels, each Gulf state's export shortfall, crude stockpiles, Brent and a crisis timeline. Updated every 12 hours.">
   <meta property="og:image" content="https://straitmonitor.com/og-image.png?v=202609211916">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Strait of Hormuz traffic at a few percent of its 2025 level, with a chart of daily transits collapsing after the 28 February 2026 closure.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Hormuz Transit Watch">
-  <meta name="twitter:description" content="Daily ship transits, oil reaching world markets in barrels, Gulf export shortfalls, crude stockpiles, Brent and a crisis timeline. Updated every 3 hours.">
+  <meta name="twitter:description" content="Daily ship transits, oil reaching world markets in barrels, Gulf export shortfalls, crude stockpiles, Brent and a crisis timeline. Updated every 12 hours.">
   <meta name="twitter:image" content="https://straitmonitor.com/og-image.png?v=202609211916">
   <meta name="twitter:image:alt" content="Strait of Hormuz traffic at a few percent of its 2025 level, with a chart of daily transits collapsing after the 28 February 2026 closure.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,7 +46,7 @@
       <div class="eyebrow">Strait of Hormuz · 26°34′N 56°15′E · straitmonitor.com</div>
       <h1>Hormuz Transit Watch</h1>
       <p>Commercial vessels crossing the strait each day, measured against the 2025 baseline, with the latest reporting alongside.</p>
-      <div class="live"><span class="live-dot" id="live-dot" data-state="saved"></span><span id="live-text">Loading…</span><span class="live-sep">·</span><a class="meth-link" href="methodology.html">Methodology</a></div>
+      <div class="live"><span class="live-dot" id="live-dot" data-state="saved"></span><span id="live-text">Loading…</span><span class="live-sep">·</span><a class="meth-link" href="methodology.html">Methodology</a><span class="live-sep">·</span><a class="meth-link" href="status.html">Pull status</a></div>
     </div>
     <div class="status">
       <span class="status-pill" id="status-pill" data-level="">
@@ -76,7 +76,7 @@
     </div>
     <details class="source-status" id="source-status" hidden>
       <summary>Data dates &amp; source status</summary>
-      <p>Checks run every 3 hours. Providers publish on their own schedules. Traffic and trade can lag by days; oil stockpiles are monthly and usually lag by months. Refresh loads the latest published snapshot.</p>
+      <p>Checks run every 12 hours. Providers publish on their own schedules. Traffic and trade can lag by days; oil stockpiles are monthly and usually lag by months. Refresh loads the latest published snapshot.</p>
       <div class="source-status-scroll">
         <table>
           <thead><tr><th scope="col">Source</th><th scope="col">Data through</th><th scope="col">Status</th><th scope="col">Last successful fetch</th></tr></thead>
@@ -434,7 +434,7 @@
         <div><h2 id="notes-title">About the numbers</h2><p class="sub">Short version. <a href="methodology.html">Read the full methodology</a>, including how counts compare with flow estimates.</p></div>
       </div>
       <div class="notes">
-        <p><strong>Traffic.</strong> Transit counts come from the IMF's <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">PortWatch</a> chokepoint dataset, which estimates daily transit calls from satellite AIS positions. Figures are published with a lag of a few days, so the latest day shown is usually 3 to 5 days behind today. A scheduled job refreshes this site's data every 3 hours; the time of the last refresh is shown in the header.</p>
+        <p><strong>Traffic.</strong> Transit counts come from the IMF's <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">PortWatch</a> chokepoint dataset, which estimates daily transit calls from satellite AIS positions. Figures are published with a lag of a few days, so the latest day shown is usually 3 to 5 days behind today. A scheduled job refreshes this site's data every 12 hours; the time of the last refresh is shown in the header.</p>
         <p><strong>Baseline.</strong> The baseline is the mean daily count across calendar year 2025, computed from the same dataset, so like is compared with like. Percentages are of that mean. The chokepoint comparison uses each passage's own 2025 mean.</p>
         <p><strong>Country exports and ports.</strong> Tonnage by country and by port comes from PortWatch's daily trade estimates, which assign each port call an estimated import and export weight from the vessel's type, size and draught change. They are model estimates in metric tonnes, not customs figures, and volatile day to day, which is why the page shows 7-day averages. Saudi Arabia and the UAE also export from ports outside the strait, so their national figures understate the Hormuz effect; the port panel separates the two. Oman lies entirely outside and is shown for contrast.</p>
         <p><strong>Oil price.</strong> Brent is the daily closing price of the front-month ICE Brent futures contract, the figure most news reports quote, taken from Yahoo Finance at each refresh. If that feed is unavailable the builder falls back to the US Energy Information Administration's daily spot price via FRED, which runs about two trading days behind, and the note under the chart says which source is in use.</p>
@@ -477,7 +477,7 @@
 
 <script src="data/events.js?v=202609211916"></script>
 <script src="data/snapshot.js?v=202609211916"></script>
-<script src="data-status.js?v=1"></script>
-<script src="app.js?v=9"></script>
+<script src="data-status.js?v=2"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
